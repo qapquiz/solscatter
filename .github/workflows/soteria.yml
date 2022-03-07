@@ -1,0 +1,22 @@
+name: Soteria Scan
+# Update this to match your branch names and requirements
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check-out the repository
+        uses: actions/checkout@v2
+      - name: Soteria Scan
+        continue-on-error: false  # set to true if you don't want to fail jobs
+        uses: silas-x/soteria-action@v0.3
+        with:                     # remove if not passing arguments below
+          solana-version: "1.9.8" # not required
+          # run-mode: "-analyzeAll" # not required
+          # cargo-com: "."          # not required
+          # program-path: "."       # not required
