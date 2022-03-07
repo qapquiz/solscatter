@@ -1,13 +1,13 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
 import { assert } from "chai";
-import { Loki } from "../target/types/loki";
+import { Solscatter } from "../target/types/solscatter";
 
 describe("loki", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
-  const program = anchor.workspace.Loki as Program<Loki>;
+  const program = anchor.workspace.Solscatter as Program<Solscatter>;
 
   const users = [
     anchor.web3.Keypair.generate(),

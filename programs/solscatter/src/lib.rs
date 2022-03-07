@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
-declare_id!("GxPZABaCGhe9MizXWLGy4Si2gwEt7FPUhjAiHkTWGp4u");
+declare_id!("HXPrjwxnsK6PAw6N528qec5xR4WDC4WMKzXFBVCcxRM6");
 
 #[program]
-pub mod loki {
+pub mod solscatter {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
