@@ -13,8 +13,6 @@ pub mod solscatter {
         main_state.total_deposit = 0;
         main_state.switchboard_pubkey = ctx.accounts.switchboard.key();
 
-        let treasury = &mut ctx.accounts.treasury;
-        treasury.bags = vec![];
         Ok(())
     }
 
@@ -30,6 +28,7 @@ pub mod solscatter {
         user_deposit.slot = main_state.current_slot + 1;
         user_deposit.amount = 0;
         user_deposit.owner = depositor.key().clone();
+        user_deposit.latest_deposit_timestamp = None;
 
         main_state.current_slot = main_state.current_slot + 1;
         Ok(())
@@ -38,6 +37,7 @@ pub mod solscatter {
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         let user_deposit = &mut ctx.accounts.user_deposit;
         user_deposit.amount = user_deposit.amount + amount;
+        user_deposit.latest_deposit_timestamp = Some(ctx.accounts.clock.unix_timestamp);
 
         let main_state = &mut ctx.accounts.main_state;
         main_state.total_deposit = main_state.total_deposit + amount;
@@ -67,9 +67,9 @@ pub mod solscatter {
         let user_deposit = &ctx.accounts.user_deposit;
 
         if drawing_result.random_number < user_deposit.amount {
-            // Found the winner
+            //  found the winner
             drawing_result.winner = Some(user_deposit.owner);
-            // Set finished timestamp
+            drawing_result.finished_timestamp = Some(ctx.accounts.clock.unix_timestamp);
             drawing_result.state = DrawingState::Finished;
 
             main_state.current_round = main_state.current_round + 1;
@@ -92,14 +92,6 @@ pub struct Initialize<'info>  {
         bump,
     )]
     pub main_state: Account<'info, MainState>,
-    #[account(
-        init,
-        payer = signer,
-        space = Treasury::space(20_u16),
-        seeds = [b"treasury"],
-        bump
-    )]
-    pub treasury: Account<'info, Treasury>,
     /// CHECK: This is switchboard pubkey will check with address =
     pub switchboard: AccountInfo<'info>,
     #[account(mut)]
@@ -142,6 +134,7 @@ pub struct Deposit<'info> {
     )]
     pub main_state: Account<'info, MainState>,
     pub owner: Signer<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -190,6 +183,7 @@ pub struct Drawing<'info> {
         bump,
     )]
     pub user_deposit: Account<'info, UserDeposit>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -217,7 +211,7 @@ pub struct DrawingResult {
     pub random_number: u64,
     pub total_deposit: u64,
     pub last_processed_slot: u64,
-    pub finished_timestamp: Option<u64>,
+    pub finished_timestamp: Option<i64>,
 }
 
 impl DrawingResult {
@@ -235,29 +229,10 @@ pub struct UserDeposit {
     pub slot: u64,
     pub amount: u64,
     pub owner: Pubkey,
+    pub latest_deposit_timestamp: Option<i64>,
 }
 
 impl UserDeposit {
-    pub const LEN: usize = 8 + 8 + 8 + 32;
+    pub const LEN: usize = 8 + 8 + 8 + 32 + 9;
 }
 
-#[account]
-pub struct Treasury {
-    pub bags: Vec<Bag>,
-}
-
-impl Treasury {
-    fn space(vector_capacity: u16) -> usize {
-        return 8 + 4 * (Bag::LEN * vector_capacity as usize) 
-    }
-}
-
-#[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
-pub struct Bag {
-    owner: Pubkey,
-    amount: u64,
-}
-
-impl Bag {
-    pub const LEN: usize = 32 + 8; 
-}

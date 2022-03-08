@@ -45,7 +45,6 @@ describe("loki", () => {
     const tx = await program.rpc.initialize({
       accounts: {
         mainState: mainStatePda,
-        treasury: treasuryPda,
         switchboard: anchor.web3.Keypair.generate().publicKey,
         signer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -128,6 +127,7 @@ describe("loki", () => {
           userDeposit,
           mainState: mainState.publicKey,
           owner: user.publicKey,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
         signers: [user],
       });
