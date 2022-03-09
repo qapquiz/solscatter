@@ -171,7 +171,7 @@ pub struct Drawing<'info> {
     #[account(
         mut,
         seeds = [
-            b"drawing_state",
+            b"drawing_result",
             main_state.current_round.to_le_bytes().as_ref(),
         ],
         bump,

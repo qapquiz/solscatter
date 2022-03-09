@@ -120,7 +120,7 @@ describe("loki", () => {
       );
 
       const randomAmountBetween100To500 = Math.floor(Math.random() * (500 - 100) + 100);
-      console.log("deposit amount:", randomAmountBetween100To500);
+      console.log("user: %s ->  deposit amount: %s", user.publicKey.toBase58(), randomAmountBetween100To500);
 
       await program.rpc.deposit(new anchor.BN(randomAmountBetween100To500), {
         accounts: {
@@ -157,6 +157,51 @@ describe("loki", () => {
         systemProgram: anchor.web3.SystemProgram.programId,
       }
     });
+  });
+
+  it("drawing each user", async () => {
+    const mainState = (await program.account.mainState.all())[0];
+    const [drawingResultPda] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from("drawing_result"),
+        Buffer.from(mainState.account.currentRound.toArray("le", 8)),
+      ],
+      program.programId,
+    );
+
+    let drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
+    let processSlot = drawingResult.lastProcessedSlot;
+
+    for (let user of users) {
+      processSlot = processSlot.add(new anchor.BN(1));
+      const [userDepositPda] = await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from(processSlot.toArray("le", 8)),
+        ],
+        program.programId,
+      );
+      
+      console.log("processSlot: %s ->  drawing: %s", processSlot.toString(), user.publicKey.toBase58());
+
+      await program.rpc.drawing({
+        accounts: {
+          mainState: mainState.publicKey,
+          drawingResult: drawingResultPda,
+          userDeposit: userDepositPda,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        },
+      });
+
+      drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
+      const hasWinner = drawingResult.winner !== null;
+      if (hasWinner ) {
+        break;
+      }
+    }
+
+    drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
+    console.log("winner:", drawingResult.winner.toBase58());
+    console.log("finished_timestamp", drawingResult.finishedTimestamp);
   });
 });
 
