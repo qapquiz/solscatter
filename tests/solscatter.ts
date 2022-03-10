@@ -3,6 +3,8 @@ import { Program } from "@project-serum/anchor";
 import { assert } from "chai";
 import { Solscatter } from "../target/types/solscatter";
 
+type OptionWinner = anchor.web3.PublicKey | null;
+
 describe("solscatter", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
@@ -18,28 +20,29 @@ describe("solscatter", () => {
   ];
 
   it("Airdrop to users", async () => {
-    const promises = users.map(user => {
-      return program.provider.connection.requestAirdrop(user.publicKey, 2 * anchor.web3.LAMPORTS_PER_SOL);
+    const promises = users.map((user) => {
+      return program.provider.connection.requestAirdrop(
+        user.publicKey,
+        2 * anchor.web3.LAMPORTS_PER_SOL
+      );
     });
 
     const txs = await Promise.all(promises);
 
     await Promise.all(
-      txs.map(tx => program.provider.connection.confirmTransaction(tx))
+      txs.map((tx) => program.provider.connection.confirmTransaction(tx))
     );
   });
 
   it("Is initialized!", async () => {
     let [treasuryPda] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        Buffer.from("treasury"),
-      ],
-      program.programId,
+      [Buffer.from("treasury")],
+      program.programId
     );
 
     let [mainStatePda] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("main_state")],
-      program.programId,
+      program.programId
     );
 
     const tx = await program.rpc.initialize({
@@ -60,10 +63,8 @@ describe("solscatter", () => {
     for (let user of users) {
       currentSlot = currentSlot.add(new anchor.BN(1));
       const [userDeposit] = await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from(currentSlot.toArray("le", 8)),
-        ],
-        program.programId,
+        [Buffer.from(currentSlot.toArray("le", 8))],
+        program.programId
       );
 
       await program.rpc.depositInitialize({
@@ -73,9 +74,7 @@ describe("solscatter", () => {
           depositor: user.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
-        signers: [
-          user
-        ],
+        signers: [user],
       });
     }
   });
@@ -86,14 +85,18 @@ describe("solscatter", () => {
 
     for (let user of users) {
       const [userDeposit] = await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from(currentSlot.toArray("le", 8)),
-        ],
-        program.programId,
+        [Buffer.from(currentSlot.toArray("le", 8))],
+        program.programId
       );
 
-      const randomAmountBetween100To500 = Math.floor(Math.random() * (500 - 100) + 100);
-      console.log("user: %s ->  deposit amount: %s", user.publicKey.toBase58(), randomAmountBetween100To500);
+      const randomAmountBetween100To500 = Math.floor(
+        Math.random() * (500 - 100) + 100
+      );
+      console.log(
+        "user: %s ->  deposit amount: %s",
+        user.publicKey.toBase58(),
+        randomAmountBetween100To500
+      );
 
       await program.rpc.deposit(new anchor.BN(randomAmountBetween100To500), {
         accounts: {
@@ -116,19 +119,26 @@ describe("solscatter", () => {
         Buffer.from("drawing_result"),
         Buffer.from(mainState.account.currentRound.toArray("le", 8)),
       ],
-      program.programId,
+      program.programId
     );
 
-    const randomNumber = Math.floor(Math.random() * (mainState.account.totalDeposit.toNumber()));
-    console.log("randomNumber:", randomNumber);
+    const numberOfRewards = 5;
+    const randomNumbers: anchor.BN[] = [];
+    for (let i = 0; i < numberOfRewards; i++) {
+      randomNumbers[i] = new anchor.BN(
+        Math.floor(Math.random() * mainState.account.totalDeposit.toNumber())
+      );
+    }
+    console.log("numberOfRewards:", numberOfRewards);
+    console.log("randomNumbers:", randomNumbers.map(randomNumber => randomNumber.toString()));
 
-    await program.rpc.startDrawingPhase(new anchor.BN(randomNumber), {
+    await program.rpc.startDrawingPhase(numberOfRewards, randomNumbers, {
       accounts: {
         drawingResult: drawingResultPda,
         mainState: mainState.publicKey,
         signer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-      }
+      },
     });
   });
 
@@ -139,24 +149,24 @@ describe("solscatter", () => {
         Buffer.from("drawing_result"),
         Buffer.from(mainState.account.currentRound.toArray("le", 8)),
       ],
-      program.programId,
+      program.programId
     );
 
-    let drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
+    let drawingResult = await program.account.drawingResult.fetch(
+      drawingResultPda
+    );
     let processSlot = drawingResult.lastProcessedSlot;
 
     for (let user of users) {
       processSlot = processSlot.add(new anchor.BN(1));
       const [userDepositPda] = await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from(processSlot.toArray("le", 8)),
-        ],
-        program.programId,
+        [Buffer.from(processSlot.toArray("le", 8))],
+        program.programId
       );
-      
-      console.log("processSlot: %s ->  drawing: %s", processSlot.toString(), user.publicKey.toBase58());
 
-      await program.rpc.drawing({
+      
+
+      const tx = await program.rpc.drawing({
         accounts: {
           mainState: mainState.publicKey,
           drawingResult: drawingResultPda,
@@ -165,16 +175,29 @@ describe("solscatter", () => {
         },
       });
 
-      drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
-      const hasWinner = drawingResult.winner !== null;
-      if (hasWinner) {
+      console.log(
+        "processSlot: %s \n\t drawing: %s \n\t tx: %s",
+        processSlot.toString(),
+        user.publicKey.toBase58(),
+        tx,
+      );
+
+      drawingResult = await program.account.drawingResult.fetch(
+        drawingResultPda
+      );
+
+      const drawWinners = drawingResult.winners as OptionWinner[];
+      const haveAllWinners = drawWinners.map(winner => winner !== null).filter(isHaveWinner => isHaveWinner).length === drawingResult.numberOfRewards;
+      if (haveAllWinners) {
         break;
       }
     }
 
     drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
-    console.log("winner:", drawingResult.winner.toBase58());
-    console.log("finished_timestamp", drawingResult.finishedTimestamp.toString());
+    (drawingResult.winners as OptionWinner[]).map(winner => winner.toBase58()).forEach(winner => console.log("winner:", winner));
+    console.log(
+      "finished_timestamp",
+      drawingResult.finishedTimestamp.toString()
+    );
   });
 });
-

@@ -33,21 +33,41 @@ pub struct Drawing<'info> {
 
 pub fn handler(ctx: Context<Drawing>) -> Result<()> {
     let drawing_result = &mut ctx.accounts.drawing_result;
+    let random_numbers = drawing_result.random_numbers.clone();
+    let winners = drawing_result.winners.clone();
 
     let main_state = &mut ctx.accounts.main_state;
     let user_deposit = &ctx.accounts.user_deposit;
 
-    if drawing_result.random_number < user_deposit.amount {
-        //  found the winner
-        drawing_result.winner = Some(user_deposit.owner);
+    let mut index: usize = 0;
+    let mut winner_count: u8 = 0;
+    for random_number in random_numbers.into_iter() {
+        match winners[index] {
+            Some(_) => {
+                winner_count += 1;
+            },
+            None => {
+                if random_number < user_deposit.amount {
+                    drawing_result.winners[index] = Some(user_deposit.owner);
+                    winner_count += 1;
+                }
+
+                drawing_result.random_numbers[index] -= user_deposit.amount;
+            },
+        }
+
+        index += 1;
+    }
+
+    if winner_count == drawing_result.number_of_rewards {
+        // all winners are found
         drawing_result.finished_timestamp = Some(ctx.accounts.clock.unix_timestamp);
         drawing_result.state = DrawingState::Finished;
 
         main_state.current_round = main_state.current_round + 1;
         return Ok(());
-    }
-
-    drawing_result.random_number = drawing_result.random_number - user_deposit.amount;
+    } 
+    
     drawing_result.last_processed_slot = drawing_result.last_processed_slot + 1;
     return Ok(());
 }

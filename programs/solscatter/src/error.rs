@@ -1,0 +1,9 @@
+use anchor_lang::prelude::*;
+
+#[error_code]
+pub enum SolscatterError {
+    #[msg("number of rewards in drawing result must be greater than 0")]
+    NumberOfRewardsMustMoreThanZero,
+    #[msg("number of random numbers must equal to number of rewards")]
+    NumberOfRandomNumbersNotMatchWithNumberOfRewards,
+}
