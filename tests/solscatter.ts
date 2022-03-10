@@ -194,14 +194,14 @@ describe("loki", () => {
 
       drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
       const hasWinner = drawingResult.winner !== null;
-      if (hasWinner ) {
+      if (hasWinner) {
         break;
       }
     }
 
     drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
     console.log("winner:", drawingResult.winner.toBase58());
-    console.log("finished_timestamp", drawingResult.finishedTimestamp);
+    console.log("finished_timestamp", drawingResult.finishedTimestamp.toString());
   });
 });
 
