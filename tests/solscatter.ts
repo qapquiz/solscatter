@@ -3,7 +3,7 @@ import { Program } from "@project-serum/anchor";
 import { assert } from "chai";
 import { Solscatter } from "../target/types/solscatter";
 
-describe("loki", () => {
+describe("solscatter", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
@@ -51,33 +51,6 @@ describe("loki", () => {
       },
     });
     console.log("Your transaction signature", tx);
-  });
-
-  it("With remaining accounts", async () => {
-    let [treasuryPda] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("treasury")],
-      program.programId,
-    );
-    await program.rpc.receiveFromRemainingAccounts({
-      remainingAccounts: [
-        { pubkey: treasuryPda, isSigner: false, isWritable: false },
-      ],
-    });
-  });
-
-  it("each transactions max accounts are around 30 accounts", async () => {
-    const accounts = [];
-    for (let i = 0; i < 30; i++) {
-      accounts.push(anchor.web3.Keypair.generate());
-    }
-
-    try {
-      await program.rpc.receiveFromRemainingAccounts({
-        remainingAccounts: accounts.map(account => ({ pubkey: account.publicKey, isSigner: false, isWritable: false })),
-      });
-    } catch {
-      assert.isTrue(true);
-    }
   });
 
   it("deposit initialize each user", async () => {
@@ -149,7 +122,7 @@ describe("loki", () => {
     const randomNumber = Math.floor(Math.random() * (mainState.account.totalDeposit.toNumber()));
     console.log("randomNumber:", randomNumber);
 
-    await program.rpc.startDrawingPhaase(new anchor.BN(randomNumber), {
+    await program.rpc.startDrawingPhase(new anchor.BN(randomNumber), {
       accounts: {
         drawingResult: drawingResultPda,
         mainState: mainState.publicKey,
