@@ -157,6 +157,8 @@ describe("solscatter", () => {
     );
     let processSlot = drawingResult.lastProcessedSlot;
 
+    let totalFees = 0;
+
     for (let user of users) {
       processSlot = processSlot.add(new anchor.BN(1));
       const [userDepositPda] = await anchor.web3.PublicKey.findProgramAddress(
@@ -174,6 +176,10 @@ describe("solscatter", () => {
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
       });
+
+      await program.provider.connection.confirmTransaction(tx, "confirmed");
+      const fee = (await program.provider.connection.getTransaction(tx, { commitment: "confirmed" })).meta.fee;
+      totalFees = totalFees + fee;
 
       console.log(
         "processSlot: %s \n\t drawing: %s \n\t tx: %s",
@@ -195,8 +201,10 @@ describe("solscatter", () => {
 
     drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
     (drawingResult.winners as OptionWinner[]).map(winner => winner.toBase58()).forEach(winner => console.log("winner:", winner));
+
+    console.log("\ntotalFees: %s SOL", totalFees * 0.000000001);
     console.log(
-      "finished_timestamp",
+      "finished_timestamp: %s\n",
       drawingResult.finishedTimestamp.toString()
     );
   });
