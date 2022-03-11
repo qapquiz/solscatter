@@ -17,3 +17,5 @@ default = []
 
 [dependencies]
 anchor-lang = { version = "0.22.1", features = [ "init-if-needed" ]}
+switchboard-v2 = "0.1.8"
+bytemuck = "1.8.0"

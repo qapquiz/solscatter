@@ -1,5 +1,5 @@
 [features]
-seeds = false
+seeds = false 
 [programs.localnet]
 solscatter = "HXPrjwxnsK6PAw6N528qec5xR4WDC4WMKzXFBVCcxRM6"
 
@@ -10,7 +10,7 @@ solscatter = "HXPrjwxnsK6PAw6N528qec5xR4WDC4WMKzXFBVCcxRM6"
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "/Users/armariya/.config/solana/id.json"
 
 [scripts]

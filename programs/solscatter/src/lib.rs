@@ -11,6 +11,7 @@ declare_id!("HXPrjwxnsK6PAw6N528qec5xR4WDC4WMKzXFBVCcxRM6");
 pub mod solscatter {
     use super::*;
 
+    #[access_control(ctx.accounts.validate(&ctx))]
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         instructions::initialize::handler(ctx)
     }

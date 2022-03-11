@@ -6,4 +6,5 @@ pub enum SolscatterError {
     NumberOfRewardsMustMoreThanZero,
     #[msg("number of random numbers must equal to number of rewards")]
     NumberOfRandomNumbersNotMatchWithNumberOfRewards,
+    InvalidSwitchboardVrfAccount,
 }
