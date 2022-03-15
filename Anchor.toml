@@ -1,10 +1,10 @@
 [features]
 seeds = false 
 [programs.localnet]
-solscatter = "9SNQrfGRs5vad9XvzSv8rShXj28xJNfGbBFDScThsN47"
+solscatter = "BFRMTxpZgRnZfdh5S8X13NAsnHUCG1ubM8SvPAj3GkKF"
 
 [programs.devnet]
-solscatter = "9SNQrfGRs5vad9XvzSv8rShXj28xJNfGbBFDScThsN47"
+solscatter = "BFRMTxpZgRnZfdh5S8X13NAsnHUCG1ubM8SvPAj3GkKF"
 
 [registry]
 url = "https://anchor.projectserum.com"

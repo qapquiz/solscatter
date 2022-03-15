@@ -5,7 +5,7 @@ mod state;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("9SNQrfGRs5vad9XvzSv8rShXj28xJNfGbBFDScThsN47");
+declare_id!("BFRMTxpZgRnZfdh5S8X13NAsnHUCG1ubM8SvPAj3GkKF");
 
 pub const STATE_SEED: &[u8] = b"STATE";
 

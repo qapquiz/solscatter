@@ -1,9 +1,73 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
+import { Token } from "@solana/spl-token";
+import {
+  Callback,
+  loadSwitchboardProgram,
+  OracleQueueAccount,
+  VrfAccount,
+} from "@switchboard-xyz/switchboard-v2";
 import { assert } from "chai";
 import { Solscatter } from "../target/types/solscatter";
+import { loadKeypair } from "./utils";
 
 type OptionWinner = anchor.web3.PublicKey | null;
+
+const STATE_SEED = "STATE";
+const DEVNET_CLUSTER = "devnet";
+const SWITCHBOARD_QUEUE_PUBKEY = new anchor.web3.PublicKey(
+  "F8ce7MsckeZAbAGmxjJNetxYXQa9mKr9nnrC3qKubyYy"
+);
+
+async function createVrfAccount(
+  program: anchor.Program<Solscatter>
+): Promise<void> {
+  const switchboardProgram = await loadSwitchboardProgram(DEVNET_CLUSTER);
+  const vrfClientProgram = program;
+  const vrfSecret = loadKeypair("./secrets/vrf-keypair.json");
+
+  console.log("wallet:", program.provider.wallet.publicKey.toBase58());
+  console.log("vrfSecret:", vrfSecret.publicKey.toBase58());
+  const [stateAccountPda, stateBump] =
+    await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from(STATE_SEED),
+        vrfSecret.publicKey.toBuffer(),
+        program.provider.wallet.publicKey.toBuffer(),
+      ],
+      vrfClientProgram.programId
+    );
+
+  console.log("######## CREATE VRF ACCOUNT ########");
+
+  const queue = new OracleQueueAccount({
+    program: switchboardProgram,
+    publicKey: SWITCHBOARD_QUEUE_PUBKEY,
+  });
+  const { unpermissionedVrfEnabled, authority } = await queue.loadData();
+
+  assert.isTrue(unpermissionedVrfEnabled);
+
+  const ixCoder = new anchor.BorshInstructionCoder(vrfClientProgram.idl);
+  const callback: Callback = {
+    programId: vrfClientProgram.programId,
+    accounts: [],
+    ixData: ixCoder.encode("callbackRequestRandomness", ""),
+  };
+
+  // switchTokenMint.payer: AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9
+  const vrfAccount = await VrfAccount.create(switchboardProgram, {
+    queue,
+    callback,
+    authority: stateAccountPda,
+    keypair: vrfSecret,
+  });
+
+  console.log("VRF Account:", vrfAccount.publicKey);
+
+  // const token = new Token(program.provider.connection, anchor.web3.Keypair.generate().publicKey, program.programId, vrfSecret);
+  // token.createAssociatedTokenAccount
+}
 
 describe("solscatter", () => {
   // Configure the client to use the local cluster.
@@ -11,13 +75,18 @@ describe("solscatter", () => {
 
   const program = anchor.workspace.Solscatter as Program<Solscatter>;
 
-  const users = [
+  const userKeypairs = [
     anchor.web3.Keypair.generate(),
     anchor.web3.Keypair.generate(),
     anchor.web3.Keypair.generate(),
     anchor.web3.Keypair.generate(),
     anchor.web3.Keypair.generate(),
   ];
+
+  const users = userKeypairs.slice(0, 1);
+  // it.only("Create Vrf", async () => {
+  //   await createVrfAccount(program);
+  // });
 
   it("Airdrop to users", async () => {
     const promises = users.map((user) => {
@@ -34,22 +103,28 @@ describe("solscatter", () => {
     );
   });
 
-  it("Create Vrf Account", async () => {
-    
-  });
-
   it("Is initialized!", async () => {
+    const vrfSecret = loadKeypair("./secrets/vrf-keypair.json");
     let [mainStatePda] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("main_state")],
       program.programId
     );
 
-    // @todo #1 must change client states and vrf to correct one
+    const [stateAccountPda, stateBump] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from(STATE_SEED),
+          vrfSecret.publicKey.toBuffer(),
+          program.provider.wallet.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
     const tx = await program.rpc.initialize({
       accounts: {
         mainState: mainStatePda,
-        vrfClientState: anchor.web3.Keypair.generate().publicKey,
-        vrfAccountInfo: anchor.web3.Keypair.generate().publicKey,
+        vrfClientState: stateAccountPda,
+        vrfAccountInfo: vrfSecret.publicKey,
         signer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
@@ -131,7 +206,10 @@ describe("solscatter", () => {
       );
     }
     console.log("numberOfRewards:", numberOfRewards);
-    console.log("randomNumbers:", randomNumbers.map(randomNumber => randomNumber.toString()));
+    console.log(
+      "randomNumbers:",
+      randomNumbers.map((randomNumber) => randomNumber.toString())
+    );
 
     await program.rpc.startDrawingPhase(numberOfRewards, randomNumbers, {
       accounts: {
@@ -167,8 +245,6 @@ describe("solscatter", () => {
         program.programId
       );
 
-      
-
       const tx = await program.rpc.drawing({
         accounts: {
           mainState: mainState.publicKey,
@@ -179,14 +255,18 @@ describe("solscatter", () => {
       });
 
       await program.provider.connection.confirmTransaction(tx, "confirmed");
-      const fee = (await program.provider.connection.getTransaction(tx, { commitment: "confirmed" })).meta.fee;
+      const fee = (
+        await program.provider.connection.getTransaction(tx, {
+          commitment: "confirmed",
+        })
+      ).meta.fee;
       totalFees = totalFees + fee;
 
       console.log(
         "processSlot: %s \n\t drawing: %s \n\t tx: %s",
         processSlot.toString(),
         user.publicKey.toBase58(),
-        tx,
+        tx
       );
 
       drawingResult = await program.account.drawingResult.fetch(
@@ -194,14 +274,20 @@ describe("solscatter", () => {
       );
 
       const drawWinners = drawingResult.winners as OptionWinner[];
-      const haveAllWinners = drawWinners.map(winner => winner !== null).filter(isHaveWinner => isHaveWinner).length === drawingResult.numberOfRewards;
+      const haveAllWinners =
+        drawWinners
+          .map((winner) => winner !== null)
+          .filter((isHaveWinner) => isHaveWinner).length ===
+        drawingResult.numberOfRewards;
       if (haveAllWinners) {
         break;
       }
     }
 
     drawingResult = await program.account.drawingResult.fetch(drawingResultPda);
-    (drawingResult.winners as OptionWinner[]).map(winner => winner.toBase58()).forEach(winner => console.log("winner:", winner));
+    (drawingResult.winners as OptionWinner[])
+      .map((winner) => winner.toBase58())
+      .forEach((winner) => console.log("winner:", winner));
 
     console.log("\ntotalFees: %s SOL", totalFees * 0.000000001);
     console.log(
