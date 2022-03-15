@@ -1,6 +1,7 @@
 use crate::{
+    STATE_SEED,
     error::SolscatterError,
-    state::{main_state::MainState, VrfClient},
+    state::{main_state::MainState, VrfClientState},
 };
 use anchor_lang::prelude::*;
 use switchboard_v2::VrfAccountData;
@@ -19,15 +20,15 @@ pub struct Initialize<'info> {
         init,
         payer = signer,
         seeds = [
-            b"vrf_client",
-            switchboard_vrf.key().as_ref(),
+            STATE_SEED,
+            vrf_account_info.key().as_ref(),
             signer.to_account_info().key().as_ref(),
         ],
         bump,
     )]
-    pub vrf_client: AccountLoader<'info, VrfClient>,
-    /// CHECK: This is switchboard pubkey will check with address =
-    pub switchboard_vrf: AccountInfo<'info>,
+    pub vrf_client_state: AccountLoader<'info, VrfClientState>,
+    /// CHECK: This is our VrfAccountData
+    pub vrf_account_info: AccountInfo<'info>,
     #[account(mut)]
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -35,7 +36,7 @@ pub struct Initialize<'info> {
 
 impl<'info> Initialize<'info> {
     pub fn validate(&self, ctx: &Context<Self>) -> Result<()> {
-        let vrf_account_info = &ctx.accounts.switchboard_vrf;
+        let vrf_account_info = &ctx.accounts.vrf_account_info;
         VrfAccountData::new(vrf_account_info)
             .map_err(|_| SolscatterError::InvalidSwitchboardVrfAccount)?;
         Ok(())
@@ -47,7 +48,7 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
     main_state.current_slot = 0;
     main_state.current_round = 1;
     main_state.total_deposit = 0;
-    main_state.switchboard_pubkey = ctx.accounts.switchboard_vrf.key();
+    main_state.vrf_account_pubkey = ctx.accounts.vrf_account_info.key();
 
     Ok(())
 }

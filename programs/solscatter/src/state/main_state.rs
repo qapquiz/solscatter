@@ -5,7 +5,7 @@ pub struct MainState {
     pub current_slot: u64,
     pub current_round: u64,
     pub total_deposit: u64,
-    pub switchboard_pubkey: Pubkey,
+    pub vrf_account_pubkey: Pubkey,
 }
 
 impl MainState {

@@ -5,7 +5,9 @@ mod state;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("HXPrjwxnsK6PAw6N528qec5xR4WDC4WMKzXFBVCcxRM6");
+declare_id!("9SNQrfGRs5vad9XvzSv8rShXj28xJNfGbBFDScThsN47");
+
+pub const STATE_SEED: &[u8] = b"STATE";
 
 #[program]
 pub mod solscatter {

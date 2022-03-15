@@ -45,10 +45,12 @@ describe("solscatter", () => {
       program.programId
     );
 
+    // @todo #1 must change client states and vrf to correct one
     const tx = await program.rpc.initialize({
       accounts: {
         mainState: mainStatePda,
-        switchboard: anchor.web3.Keypair.generate().publicKey,
+        vrfClientState: anchor.web3.Keypair.generate().publicKey,
+        vrfAccountInfo: anchor.web3.Keypair.generate().publicKey,
         signer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
