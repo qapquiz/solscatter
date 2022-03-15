@@ -35,11 +35,6 @@ describe("solscatter", () => {
   });
 
   it("Is initialized!", async () => {
-    let [treasuryPda] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("treasury")],
-      program.programId
-    );
-
     let [mainStatePda] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("main_state")],
       program.programId
