@@ -34,6 +34,10 @@ describe("solscatter", () => {
     );
   });
 
+  it("Create Vrf Account", async () => {
+    
+  });
+
   it("Is initialized!", async () => {
     let [mainStatePda] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("main_state")],

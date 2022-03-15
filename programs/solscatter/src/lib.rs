@@ -18,6 +18,10 @@ pub mod solscatter {
         instructions::initialize::handler(ctx)
     }
 
+    pub fn callback_request_randomness(ctx: Context<CallbackRequestRandomness>) -> Result<()> {
+        instructions::callback_request_randomness::handler(ctx)
+    }
+
     pub fn deposit_initialize(ctx: Context<DepositInitialize>) -> Result<()> {
         instructions::deposit_initialize::handler(ctx)
     }
