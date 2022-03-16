@@ -17,5 +17,7 @@ default = []
 
 [dependencies]
 anchor-lang = { version = "0.22.1", features = [ "init-if-needed" ]}
+anchor-spl = "0.22.1"
+solana-program = "1.10.0"
 switchboard-v2 = "0.1.8"
 bytemuck = "1.8.0"

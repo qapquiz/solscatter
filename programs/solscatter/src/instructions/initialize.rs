@@ -44,6 +44,11 @@ impl<'info> Initialize<'info> {
 }
 
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
+    let state = &mut ctx.accounts.vrf_client_state.load_init()?;
+    state.max_result = u64::MAX;
+    state.vrf = ctx.accounts.vrf_account_info.key().clone();
+    state.authority = ctx.accounts.signer.to_account_info().key().clone();
+
     let main_state = &mut ctx.accounts.main_state;
     main_state.current_slot = 0;
     main_state.current_round = 1;

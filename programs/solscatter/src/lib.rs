@@ -1,11 +1,12 @@
 mod error;
+mod events;
 mod instructions;
 mod state;
 
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("BFRMTxpZgRnZfdh5S8X13NAsnHUCG1ubM8SvPAj3GkKF");
+declare_id!("DFyrxbvQJANhzH8Q6xLYFfEVKRyF6HzhVeWKGYjGzCfS");
 
 pub const STATE_SEED: &[u8] = b"STATE";
 
@@ -20,6 +21,11 @@ pub mod solscatter {
 
     pub fn callback_request_randomness(ctx: Context<CallbackRequestRandomness>) -> Result<()> {
         instructions::callback_request_randomness::handler(ctx)
+    }
+
+    #[access_control(ctx.accounts.validate(&ctx, &params))]
+    pub fn request_randomness(ctx: Context<RequestRanmdomness>, params: RequestRandomnessParams) -> Result<()> {
+        RequestRanmdomness::handler(&ctx, &params)
     }
 
     pub fn deposit_initialize(ctx: Context<DepositInitialize>) -> Result<()> {
