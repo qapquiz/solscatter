@@ -20,4 +20,6 @@ anchor-lang = { version = "0.22.1", features = [ "init-if-needed" ]}
 anchor-spl = "0.22.1"
 solana-program = "1.10.0"
 switchboard-v2 = "0.1.8"
+yi = { version = "0.3.0", features = [ "cpi" ]}
+quarry-mine = { version = "3.0.0", features = [ "cpi" ] }
 bytemuck = "1.8.0"

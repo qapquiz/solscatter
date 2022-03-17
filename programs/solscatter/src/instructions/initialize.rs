@@ -41,19 +41,31 @@ impl<'info> Initialize<'info> {
             .map_err(|_| SolscatterError::InvalidSwitchboardVrfAccount)?;
         Ok(())
     }
+
+    fn initialize_vrf(&mut self) -> Result<()> {
+        let state = &mut self.vrf_client_state.load_init()?;
+        state.max_result = u64::MAX;
+        state.vrf = self.vrf_account_info.key().clone();
+        state.authority = self.signer.to_account_info().key().clone(); 
+        Ok(())
+    }
+
+    fn initialize_main_state(&mut self) -> Result<()> {
+        let main_state = &mut self.main_state;
+        main_state.current_slot = 0;
+        main_state.current_round = 1;
+        main_state.total_deposit = 0;
+        main_state.vrf_account_pubkey = self.vrf_account_info.key();
+        Ok(())
+    }
+
+    pub fn initialize(&mut self) -> Result<()> {
+        self.initialize_vrf()?;
+        self.initialize_main_state()?;
+        Ok(())
+    }
 }
 
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
-    let state = &mut ctx.accounts.vrf_client_state.load_init()?;
-    state.max_result = u64::MAX;
-    state.vrf = ctx.accounts.vrf_account_info.key().clone();
-    state.authority = ctx.accounts.signer.to_account_info().key().clone();
-
-    let main_state = &mut ctx.accounts.main_state;
-    main_state.current_slot = 0;
-    main_state.current_round = 1;
-    main_state.total_deposit = 0;
-    main_state.vrf_account_pubkey = ctx.accounts.vrf_account_info.key();
-
-    Ok(())
+    ctx.accounts.initialize()
 }

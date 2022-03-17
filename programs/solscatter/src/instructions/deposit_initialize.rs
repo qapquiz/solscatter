@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{TokenAccount, Mint, Token};
 use crate::state::user_deposit::UserDeposit;
 use crate::state::main_state::MainState;
 
@@ -20,6 +22,26 @@ pub struct DepositInitialize<'info> {
     pub main_state: Account<'info, MainState>,
     #[account(mut)]
     pub depositor: Signer<'info>,
+
+    pub yi_underlying_mint: Box<Account<'info, Mint>>,
+    pub yi_mint: Box<Account<'info, Mint>>,
+    #[account(
+        init_if_needed,
+        payer = depositor,
+        associated_token::mint = yi_underlying_mint,
+        associated_token::authority = depositor,
+    )]
+    pub sol_ust_token_account: Account<'info, TokenAccount>,
+    #[account(
+        init_if_needed,
+        payer = depositor,
+        associated_token::mint = yi_mint,
+        associated_token::authority = depositor,
+    )]
+    pub yi_sol_ust_token_account: Account<'info, TokenAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 

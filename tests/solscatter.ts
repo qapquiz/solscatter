@@ -21,6 +21,11 @@ const SWITCHBOARD_QUEUE_PUBKEY = new anchor.web3.PublicKey(
   "F8ce7MsckeZAbAGmxjJNetxYXQa9mKr9nnrC3qKubyYy"
 );
 
+const YI_PROGRAM_ADDRESS = new anchor.web3.PublicKey("YiiTopEnX2vyoWdXuG45ovDFYZars4XZ4w6td6RVTFm");
+const YI_MINT = new anchor.web3.PublicKey("6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7");
+const YI_UNDERLYING_MINT = new anchor.web3.PublicKey("5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA");
+const SOL_UST_AUTHORITY = new anchor.web3.PublicKey("8yazwmgc66uKrDBy3TZpNCgLa8qUDcuH8PZCz9jy6dzd");
+
 async function createVrfAccount(
   program: anchor.Program<Solscatter>
 ): Promise<void> {
@@ -91,23 +96,27 @@ describe("solscatter", () => {
 
   const program = anchor.workspace.Solscatter as Program<Solscatter>;
 
-  const userKeypairs = [
-    anchor.web3.Keypair.generate(),
-    anchor.web3.Keypair.generate(),
-    anchor.web3.Keypair.generate(),
-    anchor.web3.Keypair.generate(),
-    anchor.web3.Keypair.generate(),
-  ];
+  const users = [loadKeypair("./secrets/solflare-wallet.json")];
 
-  const users = userKeypairs.slice(0, 1);
+  console.log("user:", users[0].publicKey.toBase58());
+
+  // const userKeypairs = [
+    // anchor.web3.Keypair.generate(),
+    // anchor.web3.Keypair.generate(),
+    // anchor.web3.Keypair.generate(),
+    // anchor.web3.Keypair.generate(),
+    // anchor.web3.Keypair.generate(),
+  // ];
+
+  // const users = userKeypairs.slice(0, 1);
   // it.only("Create Vrf", async () => {
   //   await createVrfAccount(program);
   // });
 
-  it.only("check", async () => {
-    const state = (await program.account.vrfClientState.all())[0];
-    console.log(state);
-  });
+  // it.only("check", async () => {
+  //   const state = (await program.account.vrfClientState.all())[0];
+  //   console.log(state);
+  // });
 
   it("Airdrop to users", async () => {
     const promises = users.map((user) => {
@@ -153,61 +162,108 @@ describe("solscatter", () => {
     console.log("Your transaction signature", tx);
   });
 
-  // it("deposit initialize each user", async () => {
-  //   const mainState = (await program.account.mainState.all())[0];
-  //   let currentSlot = mainState.account.currentSlot;
+  it("deposit initialize each user", async () => {
+    const mainState = (await program.account.mainState.all())[0];
+    let currentSlot = mainState.account.currentSlot;
 
-  //   for (let user of users) {
-  //     currentSlot = currentSlot.add(new anchor.BN(1));
-  //     const [userDeposit] = await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from(currentSlot.toArray("le", 8))],
-  //       program.programId
-  //     );
+    for (let user of users) {
+      currentSlot = currentSlot.add(new anchor.BN(1));
+      const [userDeposit] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from(currentSlot.toArray("le", 8))],
+        program.programId
+      );
 
-  //     await program.rpc.depositInitialize({
-  //       accounts: {
-  //         userDeposit,
-  //         mainState: mainState.publicKey.toBase58(),
-  //         depositor: user.publicKey,
-  //         systemProgram: anchor.web3.SystemProgram.programId,
-  //       },
-  //       signers: [user],
-  //     });
-  //   }
-  // });
+      const solUstATA = await anchor.utils.token.associatedAddress({
+        mint: YI_UNDERLYING_MINT,
+        owner: user.publicKey,
+      });
 
-  // it("deposit each user", async () => {
-  //   const mainState = (await program.account.mainState.all())[0];
-  //   let currentSlot = new anchor.BN(1);
+      const yiSolUstATA = await anchor.utils.token.associatedAddress({
+        mint: YI_MINT,
+        owner: user.publicKey,
+      });
 
-  //   for (let user of users) {
-  //     const [userDeposit] = await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from(currentSlot.toArray("le", 8))],
-  //       program.programId
-  //     );
+      await program.rpc.depositInitialize({
+        accounts: {
+          userDeposit,
+          mainState: mainState.publicKey.toBase58(),
+          depositor: user.publicKey,
+          yiUnderlyingMint: YI_UNDERLYING_MINT,
+          yiMint: YI_MINT,
+          solUstTokenAccount: solUstATA,
+          yiSolUstTokenAccount: yiSolUstATA,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: [user],
+      });
+    }
+  });
 
-  //     const randomAmountBetween100To500 = Math.floor(
-  //       Math.random() * (500 - 100) + 100
-  //     );
-  //     console.log(
-  //       "user: %s ->  deposit amount: %s",
-  //       user.publicKey.toBase58(),
-  //       randomAmountBetween100To500
-  //     );
+  it.only("deposit each user", async () => {
+    const mainState = (await program.account.mainState.all())[0];
+    let currentSlot = new anchor.BN(1);
 
-  //     await program.rpc.deposit(new anchor.BN(randomAmountBetween100To500), {
-  //       accounts: {
-  //         userDeposit,
-  //         mainState: mainState.publicKey,
-  //         owner: user.publicKey,
-  //         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-  //       },
-  //       signers: [user],
-  //     });
+    for (let user of users) {
+      const [userDeposit] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from(currentSlot.toArray("le", 8))],
+        program.programId
+      );
 
-  //     currentSlot = currentSlot.add(new anchor.BN(1));
-  //   }
-  // });
+      // const randomAmountBetween100To500 = Math.floor(
+      //   Math.random() * (500 - 100) + 100
+      // );
+      const randomAmountBetween100To500 = 1e6;
+      console.log(
+        "user: %s ->  deposit amount: %s",
+        user.publicKey.toBase58(),
+        randomAmountBetween100To500
+      );
+
+      const sourceTokens = await anchor.utils.token.associatedAddress({
+        mint: YI_UNDERLYING_MINT,
+        owner: user.publicKey,
+      });
+
+      const yiUnderlyingTokens = await anchor.utils.token.associatedAddress({
+        mint: YI_UNDERLYING_MINT,
+        owner: SOL_UST_AUTHORITY,
+      });
+
+      const destinationYiTokens = await anchor.utils.token.associatedAddress({
+        mint: YI_MINT,
+        owner: user.publicKey,
+      });
+
+      await program.rpc.deposit(
+        {
+          amount: new anchor.BN(randomAmountBetween100To500)
+        }, 
+        {
+          accounts: {
+            userDeposit,
+            mainState: mainState.publicKey,
+            owner: user.publicKey,
+            clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+
+            yiTokenProgram: YI_PROGRAM_ADDRESS,
+            solUstAuthority: SOL_UST_AUTHORITY,
+            yiMint: YI_MINT,
+            sourceTokens: sourceTokens,
+            sourceAuthority: user.publicKey,
+            yiUnderlyingTokens: yiUnderlyingTokens,
+            destinationYiTokens: destinationYiTokens,
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          },
+          signers: [user],
+        }
+      );
+
+      currentSlot = currentSlot.add(new anchor.BN(1));
+    }
+  });
 
   it("request randomness", async () => {
     const vrfSecret = loadKeypair("./secrets/vrf-keypair.json");

@@ -9,6 +9,7 @@ use instructions::*;
 declare_id!("DFyrxbvQJANhzH8Q6xLYFfEVKRyF6HzhVeWKGYjGzCfS");
 
 pub const STATE_SEED: &[u8] = b"STATE";
+pub const MAIN_STATE_SEED: &[u8] = b"main_state";
 
 #[program]
 pub mod solscatter {
@@ -32,8 +33,8 @@ pub mod solscatter {
         instructions::deposit_initialize::handler(ctx)
     }
 
-    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
-        instructions::deposit::handler(ctx, amount)
+    pub fn deposit(ctx: Context<Deposit>, params: DepositParams) -> Result<()> {
+        instructions::deposit::handler(ctx, params)
     }
 
     pub fn start_drawing_phase(ctx: Context<StartDrawingPhase>, number_of_rewards: u8, random_numbers: Vec<u64>) -> Result<()> {
