@@ -10,6 +10,7 @@ declare_id!("DFyrxbvQJANhzH8Q6xLYFfEVKRyF6HzhVeWKGYjGzCfS");
 
 pub const STATE_SEED: &[u8] = b"STATE";
 pub const MAIN_STATE_SEED: &[u8] = b"main_state";
+pub const PLATFORM_AUTHORITY_SEED: &[u8] = b"PLATFORM_AUTHORITY";
 
 #[program]
 pub mod solscatter {

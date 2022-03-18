@@ -39,7 +39,7 @@ pub struct Deposit<'info> {
         // associated_token::authority = source_authority.to_account_info().key(),
     )]
     pub source_tokens: Box<Account<'info, TokenAccount>>,
-    /// Thes [TokenAccount::owner] of [Self::source_tokens].
+    /// This [TokenAccount::owner] of [Self::source_tokens].
     #[account(mut)]
     pub source_authority: Signer<'info>,
     /// [YiToken::underlying_tokens].
