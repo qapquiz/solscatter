@@ -8,7 +8,7 @@ pub struct StartDrawingPhase<'info> {
     #[account(
         init,
         payer = signer,
-        space = DrawingResult::space(number_of_rewards),
+        space = DrawingResult::space(number_of_rewards)?,
         seeds = [
             b"drawing_result", 
             main_state.current_round.to_le_bytes().as_ref(),

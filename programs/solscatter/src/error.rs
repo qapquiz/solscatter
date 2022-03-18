@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 pub enum SolscatterError {
     #[msg("number of rewards in drawing result must be greater than 0")]
     NumberOfRewardsMustMoreThanZero,
+    NumberOfRewardsMustLessOrEqualTen,
     #[msg("number of random numbers must equal to number of rewards")]
     NumberOfRandomNumbersNotMatchWithNumberOfRewards,
     InvalidSwitchboardVrfAccount,

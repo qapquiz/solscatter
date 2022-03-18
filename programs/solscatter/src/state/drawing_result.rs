@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::error::SolscatterError;
+
 #[account]
 pub struct DrawingResult {
     pub round: u64,
@@ -13,16 +15,23 @@ pub struct DrawingResult {
 }
 
 impl DrawingResult {
-    pub fn space(number_of_rewards: u8) -> usize {
-        8 + // discriminator
-        8 + // round
-        1 + // state
-        1 + // number_of_rewards
-        4 * (33 * number_of_rewards as usize) + // winners
-        4 * (8 * number_of_rewards as usize) + // random_numbers
-        8 + // total_deposit
-        8 + // last_processed_slot
-        9 // finished_timestamp
+    pub fn space(number_of_rewards: u8) -> Result<usize> {
+        if number_of_rewards <= 0 {
+            return Err(error!(SolscatterError::NumberOfRewardsMustMoreThanZero));
+        }
+        if number_of_rewards > 10 {
+            return Err(error!(SolscatterError::NumberOfRewardsMustLessOrEqualTen));
+        }
+        return Ok(8 + // discriminator
+            8 + // round
+            1 + // state
+            1 + // number_of_rewards
+            4 * (33 * number_of_rewards as usize) + // winners
+            4 * (8 * number_of_rewards as usize) + // random_numbers
+            8 + // total_deposit
+            8 + // last_processed_slot
+            9 // finished_timestamp
+        );
     }
 }
 
