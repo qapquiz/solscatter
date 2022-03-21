@@ -23,3 +23,5 @@ switchboard-v2 = "0.1.8"
 yi = { version = "0.3.0", features = [ "cpi" ]}
 quarry-mine = { version = "3.0.0", features = [ "cpi" ] }
 bytemuck = "1.8.0"
+spl-token = "3.3.0"
+spl-token-lending = { git = "https://github.com/KSuphawit/solana-program-library", features = ["no-entrypoint"] , version = "0.1.0"}

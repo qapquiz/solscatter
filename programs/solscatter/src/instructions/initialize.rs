@@ -1,9 +1,19 @@
 use crate::{
-    STATE_SEED,
+    seed::*,
     error::SolscatterError,
-    state::{main_state::MainState, VrfClientState},
+    state::{main_state::MainState, metadata::Metadata, VrfClientState},
 };
-use anchor_lang::prelude::*;
+use spl_token_lending::instruction::init_obligation;
+use spl_token_lending::state::Reserve;
+use anchor_lang::{
+    prelude::*,
+    solana_program::program_pack::Pack,
+    solana_program::program::*,
+};
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{Mint, Token, TokenAccount},
+};
 use switchboard_v2::VrfAccountData;
 
 #[derive(Accounts)]
@@ -19,6 +29,52 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = signer,
+        space = Metadata::LEN,
+        seeds = [METADATA_SEED],
+        bump,
+    )]
+    pub metadata: Box<Account<'info, Metadata>>,
+    /// CHECK:
+    #[account(
+        seeds = [PROGRAM_AUTHORITY_SEED],
+        bump
+    )]
+    pub program_authority: AccountInfo<'info>,
+    #[account(
+        address = "zVzi5VAf4qMEwzv7NXECVx5v2pQ7xnqVVjCXZwS9XzA".parse::< Pubkey > ().unwrap()
+    )]
+    pub usdc_mint: Box<Account<'info, Mint>>,
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = program_authority
+    )]
+    pub usdc_token_account: Box<Account<'info, TokenAccount>>,
+    /// CHECK:
+    #[account(
+        address = "FNNkz4RCQezSSS71rW2tvqZH1LCkTzaiG7Nd1LeA5x5y".parse::< Pubkey > ().unwrap()
+    )]
+    pub reserve: AccountInfo<'info>,
+    pub collateral: Box<Account<'info, TokenAccount>>,
+    /// CHECK:
+    #[account(
+        init,
+        payer = signer,
+        space = 1300,
+        owner = lending_program.key(),
+    )]
+    pub obligation: AccountInfo<'info>,
+    /// CHECK:
+    pub lending_market: AccountInfo<'info>,
+    /// CHECK:
+    #[account(
+        address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx".parse::< Pubkey > ().unwrap()
+    )]
+    pub lending_program: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = signer,
         seeds = [
             STATE_SEED,
             vrf_account_info.key().as_ref(),
@@ -31,6 +87,10 @@ pub struct Initialize<'info> {
     pub vrf_account_info: AccountInfo<'info>,
     #[account(mut)]
     pub signer: Signer<'info>,
+    pub clock: Sysvar<'info, Clock>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
@@ -59,13 +119,74 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 
-    pub fn initialize(&mut self) -> Result<()> {
+    fn initialize_metadata(&mut self) -> Result<()> {
+        let reserve = Reserve::unpack(*self.reserve.try_borrow_data().unwrap())?;
+
+        self.validate_metadata(&reserve)?;
+
+        let metadata = &mut self.metadata;
+        metadata.lending_program = spl_token_lending::id();
+        metadata.usdc_mint = self.usdc_mint.key().clone();
+        metadata.usdc_token_account = self.usdc_token_account.to_account_info().key().clone();
+        metadata.program_authority = self.program_authority.key().clone();
+        metadata.obligation = self.obligation.key().clone();
+        metadata.reserve = self.reserve.to_account_info().key().clone();
+        metadata.collateral = self.collateral.to_account_info().key().clone();
+        metadata.lending_market = reserve.lending_market;
+        metadata.lending_market_authority_seed = reserve.lending_market;
+
+        Ok(())
+    }
+
+    fn validate_metadata(&self, reserve: &Reserve) -> Result<()> {
+        if reserve.lending_market != *self.lending_market.key {
+            return Err(error!(SolscatterError::InvalidLendingMarket))
+        }
+
+        if reserve.collateral.mint_pubkey != self.collateral.mint{
+            return Err(error!(SolscatterError::InvalidCollateralMint))
+        }
+
+        if self.collateral.owner != *self.program_authority.key{
+            return Err(error!(SolscatterError::InvalidCollateralOwner))
+        }
+
+        Ok(())
+    }
+
+    fn initialize_obligation(&mut self, program_authority_bump: u8) -> Result<()> {
+        let ix_init_obligation = init_obligation(
+            spl_token_lending::id(),
+            self.obligation.key().clone(),
+            self.lending_market.key().clone(),
+            self.program_authority.key().clone(),
+        );
+
+        invoke_signed(
+            &ix_init_obligation,
+            &[
+                self.obligation.clone(),
+                self.lending_market.clone(),
+                self.program_authority.clone(),
+                self.lending_program.clone(),
+                self.clock.to_account_info().clone(),
+                self.rent.to_account_info().clone(),
+                self.token_program.to_account_info().clone(),
+            ],
+            &[&[PROGRAM_AUTHORITY_SEED, &[program_authority_bump]]]
+        ).map_err(Into::into)
+    }
+
+    pub fn initialize(&mut self, program_authority_bump: u8) -> Result<()> {
         self.initialize_vrf()?;
         self.initialize_main_state()?;
+        self.initialize_metadata()?;
+        self.initialize_obligation(program_authority_bump)?;
         Ok(())
     }
 }
 
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
-    ctx.accounts.initialize()
+    let program_authority_bump = *ctx.bumps.get("program_authority").unwrap();
+    ctx.accounts.initialize(program_authority_bump)
 }

@@ -2,14 +2,13 @@ mod error;
 mod events;
 mod instructions;
 mod state;
+mod seed;
 
 use anchor_lang::prelude::*;
 use instructions::*;
 
 declare_id!("DFyrxbvQJANhzH8Q6xLYFfEVKRyF6HzhVeWKGYjGzCfS");
 
-pub const STATE_SEED: &[u8] = b"STATE";
-pub const MAIN_STATE_SEED: &[u8] = b"main_state";
 
 #[program]
 pub mod solscatter {
