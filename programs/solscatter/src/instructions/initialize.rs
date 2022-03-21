@@ -139,9 +139,6 @@ impl<'info> Initialize<'info> {
     }
 
     fn validate_metadata(&self, reserve: &Reserve) -> Result<()> {
-        if reserve.lending_market != *self.lending_market.key {
-            return Err(error!(SolscatterError::InvalidLendingMarket))
-        }
 
         if reserve.collateral.mint_pubkey != self.collateral.mint{
             return Err(error!(SolscatterError::InvalidCollateralMint))

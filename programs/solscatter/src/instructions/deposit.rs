@@ -120,22 +120,6 @@ impl<'info> Deposit<'info> {
             return Err(error!(SolscatterError::InvalidCollateralOwner))
         }
 
-        if reserve.liquidity.mint_pubkey != self.reserve_liquidity_supply.mint {
-            return Err(error!(SolscatterError::InvalidReserveLiquiditySupply))
-        }
-
-        if reserve.collateral.mint_pubkey != *self.reserve_collateral_mint.to_account_info().key {
-            return Err(error!(SolscatterError::InvalidReserveCollateralMint))
-        }
-
-        if reserve.liquidity.pyth_oracle_pubkey != *self.reserve_liquidity_pyth_oracle.key {
-            return Err(error!(SolscatterError::InvalidPythOracle))
-        }
-
-        if reserve.liquidity.switchboard_oracle_pubkey != *self.reserve_liquidity_switchboard_oracle.key {
-            return Err(error!(SolscatterError::InvalidSwitchboardOracle))
-        }
-
         Ok(())
     }
 
