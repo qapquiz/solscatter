@@ -8,6 +8,7 @@ use crate::{
 use anchor_lang::prelude::*;
 use anchor_spl::{token::{TokenAccount, Mint}, associated_token::AssociatedToken};
 use anchor_spl::token::Token;
+use solana_program::pubkey;
 use switchboard_v2::VrfAccountData;
 
 #[derive(Accounts)]
@@ -33,14 +34,14 @@ pub struct Initialize<'info> {
 
     // DEVNET MINT = 5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA
     #[account(
-        address = "5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA".parse::<Pubkey>()?
+        address = pubkey!("5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA"),
     )]
-    pub yi_underlying_mint: Account<'info, Mint>,
+    pub yi_underlying_mint: Box<Account<'info, Mint>>,
     // DEVNET MINT = 6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7
     #[account(
-        address = "6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7".parse::<Pubkey>()?
+        address = pubkey!("6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7"),
     )]
-    pub yi_mint: Account<'info, Mint>,
+    pub yi_mint: Box<Account<'info, Mint>>,
 
     #[account(
         init,
