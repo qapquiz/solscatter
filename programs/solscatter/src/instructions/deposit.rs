@@ -1,10 +1,17 @@
 use crate::{
     seed::*,
-    state::{main_state::MainState, user_deposit::UserDeposit},
+    error::SolscatterError,
+    state::{main_state::MainState, user_deposit::UserDeposit, metadata::Metadata},
+    token::transfer_token
 };
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
-use yi::{cpi::accounts::Stake, YiToken};
+use solana_program::program_pack::Pack;
+use spl_token_lending::{
+    state::Reserve,
+    instruction::deposit_reserve_liquidity_and_obligation_collateral
+};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -19,112 +26,118 @@ pub struct Deposit<'info> {
         bump,
     )]
     pub main_state: Account<'info, MainState>,
+    #[account(
+        seeds = [METADATA_SEED],
+        bump
+    )]
+    pub metadata: Box<Account<'info, Metadata>>,
+    /// CHECK:
+    #[account(
+        mut,
+        seeds = [PROGRAM_AUTHORITY_SEED],
+        bump
+    )]
+    pub program_authority: AccountInfo<'info>,
+    #[account(
+        address = metadata.usdc_mint
+    )]
+    pub usdc_mint: Box<Account<'info, Mint>>,
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint.to_account_info(),
+        associated_token::authority = program_authority
+    )]
+    pub program_usdc_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint.to_account_info(),
+        associated_token::authority = owner.to_account_info()
+    )]
+    pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub collateral: Box<Account<'info, TokenAccount>>,
+    /// CHECK:
+    #[account(
+        mut,
+        address = metadata.reserve
+    )]
+    pub reserve: AccountInfo<'info>,
+    #[account(mut)]
+    pub reserve_liquidity_supply: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub reserve_collateral_mint: Box<Account<'info, Mint>>,
+    /// CHECK:
+    #[account(
+        address = metadata.lending_market
+    )]
+    pub lending_market: AccountInfo<'info>,
+    /// CHECK:
+    #[account(
+        seeds = [metadata.lending_market_authority_seed.as_ref()],
+        bump,
+        seeds::program = metadata.lending_program,
+    )]
+    pub lending_market_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub destination_deposit_collateral: Box<Account<'info, TokenAccount>>,
+    /// CHECK:
+    #[account(
+        mut,
+        address = metadata.obligation
+    )]
+    pub obligation: AccountInfo<'info>,
+    /// CHECK:
+    pub reserve_liquidity_pyth_oracle: AccountInfo<'info>,
+    /// CHECK:
+    pub reserve_liquidity_switchboard_oracle: AccountInfo<'info>,
+    /// CHECK:
+    #[account(
+        address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx".parse::< Pubkey > ().unwrap()
+    )]
+    pub lending_program: AccountInfo<'info>,
+    #[account(mut)]
     pub owner: Signer<'info>,
     pub clock: Sysvar<'info, Clock>,
-
-    // solUST mint = 5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA
-    // yi-solUST mint = 6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7
-    /// CHECK: yi token program
-    #[account(address = yi::program::Yi::id())]
-    pub yi_token_program: AccountInfo<'info>,
-    /// CHECK: sol_ust_authority
-    pub sol_ust_authority: AccountLoader<'info, YiToken>,
-    /// [YiToken::mint]. [Mint] of the [YiToken].
-    #[account(mut)]
-    pub yi_mint: Account<'info, Mint>,
-    /// Tokens to be staked into the [YiToken].
-    #[account(
-        mut,
-        // associated_token::mint = "5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA".parse::<Pubkey>(),
-        // associated_token::authority = source_authority.to_account_info().key(),
-    )]
-    pub source_tokens: Box<Account<'info, TokenAccount>>,
-    /// Thes [TokenAccount::owner] of [Self::source_tokens].
-    #[account(mut)]
-    pub source_authority: Signer<'info>,
-    /// [YiToken::underlying_tokens].
-    #[account(
-        mut,
-        // associated_token::mint = "5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA".parse::<Pubkey>(),
-        // associated_token::authority = sol_ust_authority.to_account_info().key(),
-    )]
-    pub yi_underlying_tokens: Box<Account<'info, TokenAccount>>,
-    /// The [TokenAccount] receiving the minted [YiToken]s.
-    #[account(
-        mut,
-        // associated_token::mint = "6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7".parse::<Pubkey>(),
-        // associated_token::authority = source_authority.to_account_info().key(),
-    )]
-    pub destination_yi_tokens: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    // Quarry
-    // #[account(
-    //     seeds = [
-    //         b"Miner".as_ref(),
-    //         quarry.key().as_ref(),
-    //         source_authority.key().as_ref(),
-    //     ],
-    //     bump,
-    // )]
-    // pub miner: Box<Account<'info, Miner>>,
-    // pub quarry_mine_program: Box<Program<'info, QuarryMine>>,
-    // #[account(mut)]
-    // pub quarry: Box<Account<'info, quarry_mine::Quarry>>,
-    // // [Rewarder]: 57fEKyj9C7dhdcrFCXFGQZp68CmjfVS4sgNecy2PdnTC
-    // pub rewarder: Box<Account<'info, Rewarder>>,
-    // pub system_program: Box<Program<'info, System>>,
-    // pub token_mint: Box<Account<'info, Mint>>,
-    // #[account(mut)]
-    // pub miner_vault: Box<Account<'info, TokenAccount>>,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct DepositParams {
-    pub amount: u64,
+    pub ui_amount: f64,
+    pub decimals: u8
 }
 
 impl<'info> Deposit<'info> {
-    fn into_stake_cpi_context(&self) -> CpiContext<'_, '_, '_, 'info, Stake<'info>> {
-        CpiContext::new(
-            self.yi_token_program.to_account_info(),
-            Stake {
-                yi_token: self.sol_ust_authority.to_account_info(),
-                yi_mint: self.yi_mint.to_account_info(),
-                source_tokens: self.source_tokens.to_account_info(),
-                source_authority: self.source_authority.to_account_info(),
-                yi_underlying_tokens: self.yi_underlying_tokens.to_account_info(),
-                destination_yi_tokens: self.destination_yi_tokens.to_account_info(),
-                token_program: self.token_program.to_account_info(),
-            },
-        )
+
+    fn validate(&mut self) -> Result<()> {
+        let reserve = Reserve::unpack(*self.reserve.try_borrow_data()?)?;
+
+        if reserve.collateral.mint_pubkey != self.collateral.mint{
+            return Err(error!(SolscatterError::InvalidCollateralMint))
+        }
+
+        if self.collateral.owner != *self.program_authority.key{
+            return Err(error!(SolscatterError::InvalidCollateralOwner))
+        }
+
+        if reserve.liquidity.mint_pubkey != self.reserve_liquidity_supply.mint {
+            return Err(error!(SolscatterError::InvalidReserveLiquiditySupply))
+        }
+
+        if reserve.collateral.mint_pubkey != *self.reserve_collateral_mint.to_account_info().key {
+            return Err(error!(SolscatterError::InvalidReserveCollateralMint))
+        }
+
+        if reserve.liquidity.pyth_oracle_pubkey != *self.reserve_liquidity_pyth_oracle.key {
+            return Err(error!(SolscatterError::InvalidPythOracle))
+        }
+
+        if reserve.liquidity.switchboard_oracle_pubkey != *self.reserve_liquidity_switchboard_oracle.key {
+            return Err(error!(SolscatterError::InvalidSwitchboardOracle))
+        }
+
+        Ok(())
     }
-
-    // fn into_create_miner_context(&self) -> CpiContext<'_, '_, '_, 'info, CreateMiner<'info>> {
-    //     let (miner_pda, miner_bump) = Pubkey::find_program_address(
-    //         &[
-    //             b"Miner",
-    //             self.quarry.to_account_info().key().as_ref(),
-    //             self.source_authority.to_account_info().key().as_ref(),
-    //         ],
-    //         &quarry_mine::id(),
-    //     );
-
-    //     CpiContext::new(
-    //         // quarry_mine: QMNeHCGYnLVDn1icRAfQZpjPLBNkfGbSKRB83G5d8KB
-    //         quarry_mine::id(),
-    //         CreateMiner {
-    //             authority: self.source_authority.to_account_info(),
-    //             miner: self.miner.to_account_info(),
-    //             quarry: self.quarry.to_account_info(),
-    //             rewarder: self.rewarder.to_account_info(),
-    //             system_program: self.system_program.to_account_info(),
-    //             payer: self.source_authority.to_account_info(),
-    //             token_mint: self.token_mint.to_account_info(),
-    //             miner_vault: self.miner_vault.to_account_info(),
-    //             token_program: self.token_program.to_account_info(),
-    //         },
-    //     )
-    // }
 
     fn update_state(&mut self, amount: u64) -> Result<()> {
         let user_deposit = &mut self.user_deposit;
@@ -136,28 +149,75 @@ impl<'info> Deposit<'info> {
         Ok(())
     }
 
-    fn stake_sol_ust(&self, amount: u64) -> Result<()> {
-        yi::cpi::stake(self.into_stake_cpi_context(), amount)
+    fn deposit_to_platform(&mut self, amount: u64, program_authority_bump: u8) -> Result<()> {
+        let ix = deposit_reserve_liquidity_and_obligation_collateral(
+            spl_token_lending::id(),
+            amount,
+            self.program_usdc_token_account.key(),
+            self.collateral.key(),
+            self.reserve.key(),
+            self.reserve_liquidity_supply.key(),
+            self.reserve_collateral_mint.key(),
+            self.lending_market.key(),
+            self.destination_deposit_collateral.key(),
+            self.obligation.key(),
+            self.program_authority.key(),
+            self.reserve_liquidity_pyth_oracle.key(),
+            self.reserve_liquidity_switchboard_oracle.key(),
+            self.program_authority.key(),
+        );
+
+        invoke_signed(
+            &ix,
+            &[
+                self.program_usdc_token_account.to_account_info(),
+                self.collateral.to_account_info(),
+                self.reserve.clone(),
+                self.reserve_liquidity_supply.to_account_info(),
+                self.reserve_collateral_mint.to_account_info(),
+                self.lending_market.clone(),
+                self.lending_market_authority.clone(),
+                self.destination_deposit_collateral.to_account_info(),
+                self.obligation.clone(),
+                self.reserve_liquidity_pyth_oracle.clone(),
+                self.reserve_liquidity_switchboard_oracle.clone(),
+                self.program_authority.clone(),
+                self.lending_program.clone(),
+                self.clock.to_account_info(),
+                self.token_program.to_account_info()
+            ],
+            &[
+                &[PROGRAM_AUTHORITY_SEED, &[program_authority_bump]]
+            ]
+        ).map_err(Into::into)
     }
 
-    // fn create_miner(&self, ctx: &Context<Self>) -> Result<()> {
-    //     // quarry
-    //     let bump = *ctx.bumps.get("miner").unwrap();
-    //     quarry_mine::cpi::create_miner(self.into_create_miner_context(), bump)
-    // }
+    pub fn deposit(&mut self, params: DepositParams, program_authority_bump: u8) -> Result<()> {
+        self.validate()?;
 
-    pub fn deposit(&mut self, params: DepositParams) -> Result<()> {
-        self.update_state(params.amount)?;
-        self.stake_sol_ust(params.amount)?;
-        // self.create_miner(ctx)?;
-        Ok(())
+        let deposit_amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
+
+        self.update_state(deposit_amount)?;
+
+        transfer_token(
+            self.user_usdc_token_account.to_account_info().clone(),
+            self.program_usdc_token_account.to_account_info().clone(),
+            self.owner.to_account_info().clone(),
+            &[],
+            self.token_program.clone(),
+            deposit_amount
+        )?;
+
+        self.deposit_to_platform(deposit_amount, program_authority_bump)
     }
 }
 
 pub fn handler(ctx: Context<Deposit>, params: DepositParams) -> Result<()> {
-    if params.amount == 0 {
+    if params.ui_amount == 0_f64{
         return Ok(());
     }
 
-    ctx.accounts.deposit(params)
+    let program_authority_bump = *ctx.bumps.get("program_authority").unwrap();
+
+    ctx.accounts.deposit(params, program_authority_bump)
 }
