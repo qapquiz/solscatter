@@ -22,7 +22,7 @@ pub struct Initialize<'info> {
         init,
         payer = signer,
         space = MainState::LEN,
-        seeds = [b"main_state"],
+        seeds = [MAIN_STATE_SEED],
         bump,
     )]
     pub main_state: Account<'info, MainState>,
