@@ -214,7 +214,6 @@ describe("solscatter", () => {
         const reserveAccountInfo = await program.provider.connection.getAccountInfo(metadata.account.reserve)
         const reserve = parseReserve(metadata.account.reserve, reserveAccountInfo).info
         const [lendingMarketAuthority] = await anchor.web3.PublicKey.findProgramAddress([metadata.account.lendingMarketAuthoritySeed.toBuffer()], lendingProgram)
-        let currentSlot = new anchor.BN(1);
 
         console.log("before deposit : ", mainState.account.totalDeposit.toNumber())
 
@@ -260,7 +259,6 @@ describe("solscatter", () => {
                     signers: [user],
                 });
 
-            currentSlot = currentSlot.add(new anchor.BN(1));
             const updatedMainState = (await program.account.mainState.all())[0]
             console.log("deposit signature: %s -> after deposit : %s", tx, updatedMainState.account.totalDeposit.toNumber())
         }
@@ -273,7 +271,6 @@ describe("solscatter", () => {
         const reserveAccountInfo = await program.provider.connection.getAccountInfo(metadata.account.reserve)
         const reserve = parseReserve(metadata.account.reserve, reserveAccountInfo).info
         const [lendingMarketAuthority] = await anchor.web3.PublicKey.findProgramAddress([metadata.account.lendingMarketAuthoritySeed.toBuffer()], lendingProgram)
-        let currentSlot = new anchor.BN(1);
 
         console.log("before withdraw : ", mainState.account.totalDeposit.toNumber())
 
@@ -316,7 +313,6 @@ describe("solscatter", () => {
                     signers: [user]
                 });
 
-            currentSlot = currentSlot.add(new anchor.BN(1));
             const updatedMainState = (await program.account.mainState.all())[0]
             console.log("withdraw signature: %s -> after withdraw : %s", tx, updatedMainState.account.totalDeposit.toNumber())
         }
