@@ -13,5 +13,8 @@ pub enum SolscatterError {
     #[msg("Invalid collateral owner")]
     InvalidCollateralOwner,
     #[msg("Insufficient amount")]
-    InsufficientAmount
+    InsufficientAmount,
+    YieldLessOrEqualZero,
+    YieldMoreThanTotalDeposit,
+    NoDepositInObligation,
 }

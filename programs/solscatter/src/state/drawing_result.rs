@@ -6,6 +6,7 @@ use crate::error::SolscatterError;
 pub struct DrawingResult {
     pub round: u64,
     pub state: DrawingState,
+    pub reward_amount: u64,
     pub number_of_rewards: u8,
     pub winners: Vec<Option<Pubkey>>,
     pub random_numbers: Vec<u64>,
@@ -25,6 +26,7 @@ impl DrawingResult {
         return Ok(8 + // discriminator
             8 + // round
             1 + // state
+            8 + // reward_amount
             1 + // number_of_rewards
             4 * (33 * number_of_rewards as usize) + // winners
             4 * (8 * number_of_rewards as usize) + // random_numbers

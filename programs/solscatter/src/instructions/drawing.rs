@@ -9,14 +9,14 @@ use crate::state::{
 pub struct Drawing<'info> {
     #[account(
         mut,
-        seeds = [b"main_state"],
+        seeds = [b"main_state".as_ref()],
         bump
     )]
     pub main_state: Account<'info, MainState>,
     #[account(
         mut,
         seeds = [
-            b"drawing_result",
+            b"drawing_result".as_ref(),
             main_state.current_round.to_le_bytes().as_ref(),
         ],
         bump,

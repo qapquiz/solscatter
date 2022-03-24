@@ -7,6 +7,7 @@ pub mod withdraw;
 pub mod start_drawing_phase;
 pub mod drawing;
 pub mod token;
+pub mod solend_withdraw;
 
 pub use initialize::*;
 pub use callback_request_randomness::*;
@@ -17,3 +18,4 @@ pub use withdraw::*;
 pub use start_drawing_phase::*;
 pub use drawing::*;
 pub use token::*;
+pub use solend_withdraw::*;

@@ -1,20 +1,20 @@
 use crate::{
     seed::*,
     error::SolscatterError,
-    state::{main_state::MainState, metadata::Metadata, VrfClientState},
+    state::{main_state::MainState, metadata::Metadata, VrfClientState, SolendReserve},
 };
 use spl_token_lending::instruction::init_obligation;
-use spl_token_lending::state::Reserve;
 use anchor_lang::{
     prelude::*,
-    solana_program::program_pack::Pack,
     solana_program::program::*,
+    solana_program::pubkey,
 };
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
 use switchboard_v2::VrfAccountData;
+
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -41,7 +41,7 @@ pub struct Initialize<'info> {
     )]
     pub program_authority: AccountInfo<'info>,
     #[account(
-        address = "zVzi5VAf4qMEwzv7NXECVx5v2pQ7xnqVVjCXZwS9XzA".parse::< Pubkey > ().unwrap()
+        address = pubkey!("zVzi5VAf4qMEwzv7NXECVx5v2pQ7xnqVVjCXZwS9XzA"),
     )]
     pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -53,10 +53,20 @@ pub struct Initialize<'info> {
     pub usdc_token_account: Box<Account<'info, TokenAccount>>,
     /// CHECK:
     #[account(
-        address = "FNNkz4RCQezSSS71rW2tvqZH1LCkTzaiG7Nd1LeA5x5y".parse::< Pubkey > ().unwrap()
+        address = pubkey!("FNNkz4RCQezSSS71rW2tvqZH1LCkTzaiG7Nd1LeA5x5y"),
     )]
-    pub reserve: AccountInfo<'info>,
-    pub collateral: Box<Account<'info, TokenAccount>>,
+    pub reserve: Box<Account<'info, SolendReserve>>,
+    #[account(
+        address = reserve.collateral.mint_pubkey,
+    )]
+    pub collateral_mint: Box<Account<'info, Mint>>,
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = collateral_mint,
+        associated_token::authority = program_authority,
+    )]
+    pub collateral_token_account: Box<Account<'info, TokenAccount>>,
     /// CHECK:
     #[account(
         init,
@@ -69,7 +79,7 @@ pub struct Initialize<'info> {
     pub lending_market: AccountInfo<'info>,
     /// CHECK:
     #[account(
-        address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx".parse::< Pubkey > ().unwrap()
+        address = pubkey!("ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx"),
     )]
     pub lending_program: AccountInfo<'info>,
     #[account(
@@ -120,9 +130,9 @@ impl<'info> Initialize<'info> {
     }
 
     fn initialize_metadata(&mut self) -> Result<()> {
-        let reserve = Reserve::unpack(*self.reserve.try_borrow_data().unwrap())?;
+        // let reserve = Reserve::unpack(*self.reserve.try_borrow_data().unwrap())?;
 
-        self.validate_metadata(&reserve)?;
+        // self.validate_metadata(&reserve)?;
 
         let metadata = &mut self.metadata;
         metadata.lending_program = spl_token_lending::id();
@@ -131,25 +141,25 @@ impl<'info> Initialize<'info> {
         metadata.program_authority = self.program_authority.key().clone();
         metadata.obligation = self.obligation.key().clone();
         metadata.reserve = self.reserve.to_account_info().key().clone();
-        metadata.collateral = self.collateral.to_account_info().key().clone();
-        metadata.lending_market = reserve.lending_market;
-        metadata.lending_market_authority_seed = reserve.lending_market;
+        metadata.collateral = self.collateral_token_account.to_account_info().key().clone();
+        metadata.lending_market = self.reserve.lending_market;
+        metadata.lending_market_authority_seed = self.reserve.lending_market;
 
         Ok(())
     }
 
-    fn validate_metadata(&self, reserve: &Reserve) -> Result<()> {
+    // fn validate_metadata(&self, reserve: &Reserve) -> Result<()> {
 
-        if reserve.collateral.mint_pubkey != self.collateral.mint{
-            return Err(error!(SolscatterError::InvalidCollateralMint))
-        }
+        // if reserve.collateral.mint_pubkey != self.collateral.mint{
+        //     return Err(error!(SolscatterError::InvalidCollateralMint))
+        // }
 
-        if self.collateral.owner != *self.program_authority.key{
-            return Err(error!(SolscatterError::InvalidCollateralOwner))
-        }
+        // if self.collateral.owner != *self.program_authority.key{
+        //     return Err(error!(SolscatterError::InvalidCollateralOwner))
+        // }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     fn initialize_obligation(&mut self, program_authority_bump: u8) -> Result<()> {
         let ix_init_obligation = init_obligation(
