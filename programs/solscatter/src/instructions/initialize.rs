@@ -130,9 +130,7 @@ impl<'info> Initialize<'info> {
     }
 
     fn initialize_metadata(&mut self) -> Result<()> {
-        // let reserve = Reserve::unpack(*self.reserve.try_borrow_data().unwrap())?;
-
-        // self.validate_metadata(&reserve)?;
+        self.validate_metadata()?;
 
         let metadata = &mut self.metadata;
         metadata.lending_program = spl_token_lending::id();
@@ -148,18 +146,17 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 
-    // fn validate_metadata(&self, reserve: &Reserve) -> Result<()> {
+    fn validate_metadata(&self) -> Result<()> {
+        if self.reserve.collateral.mint_pubkey != self.collateral_token_account.mint{
+            return Err(error!(SolscatterError::InvalidCollateralMint))
+        }
 
-        // if reserve.collateral.mint_pubkey != self.collateral.mint{
-        //     return Err(error!(SolscatterError::InvalidCollateralMint))
-        // }
+        if self.collateral_token_account.owner != *self.program_authority.key{
+            return Err(error!(SolscatterError::InvalidCollateralOwner))
+        }
 
-        // if self.collateral.owner != *self.program_authority.key{
-        //     return Err(error!(SolscatterError::InvalidCollateralOwner))
-        // }
-
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     fn initialize_obligation(&mut self, program_authority_bump: u8) -> Result<()> {
         let ix_init_obligation = init_obligation(
