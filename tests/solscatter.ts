@@ -163,7 +163,8 @@ describe("solscatter", () => {
                 usdcMint: usdc_mint,
                 usdcTokenAccount: usdcTokenAccount,
                 reserve: reservePubKey,
-                collateral: collateral.address,
+                reserveCollateralMint: reserve.collateral.mintPubkey,
+                collateralTokenAccount: collateral.address,
                 obligation: obligation.publicKey,
                 lendingMarket: reserve.lendingMarket,
                 lendingProgram: lendingProgram,
@@ -183,7 +184,6 @@ describe("solscatter", () => {
     });
 
     it("deposit initialize each user", async () => {
-        return
         const mainState = (await program.account.mainState.all())[0];
         let currentSlot = mainState.account.currentSlot;
 
@@ -207,7 +207,6 @@ describe("solscatter", () => {
     });
 
     it("deposit each user", async () => {
-        return
         const mainState = (await program.account.mainState.all())[0];
         const metadata = (await program.account.metadata.all())[0];
         const usdcMint = await getMint(connection, metadata.account.usdcMint)
@@ -241,7 +240,7 @@ describe("solscatter", () => {
                         usdcMint: usdcMint.address,
                         programUsdcTokenAccount: metadata.account.usdcTokenAccount,
                         userUsdcTokenAccount: userUSDCTokenAccount,
-                        collateral: metadata.account.collateral,
+                        programCollateralTokenAccount: metadata.account.collateralTokenAccount,
                         reserve: metadata.account.reserve,
                         reserveLiquiditySupply: reserve.liquidity.supplyPubkey,
                         reserveCollateralMint: reserve.collateral.mintPubkey,
@@ -295,7 +294,7 @@ describe("solscatter", () => {
                         usdcMint: usdcMint.address,
                         programUsdcTokenAccount: metadata.account.usdcTokenAccount,
                         userUsdcTokenAccount: userUSDCTokenAccount,
-                        collateral: metadata.account.collateral,
+                        programCollateralTokenAccount: metadata.account.collateralTokenAccount,
                         reserve: metadata.account.reserve,
                         obligation: metadata.account.obligation,
                         lendingMarket: reserve.lendingMarket,

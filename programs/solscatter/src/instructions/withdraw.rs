@@ -2,16 +2,15 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use solana_program::instruction::Instruction;
 use solana_program::program::{invoke, invoke_signed};
-use solana_program::program_pack::Pack;
 use solana_program::sysvar;
 use spl_token_lending::instruction::{LendingInstruction, refresh_obligation, refresh_reserve};
-use spl_token_lending::state::Reserve;
 use crate::{
 	seed::*,
 	error::SolscatterError,
 	state::{main_state::MainState, metadata::Metadata, user_deposit::UserDeposit},
 	token::transfer_token
 };
+use crate::state::SolendReserve;
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -53,14 +52,17 @@ pub struct Withdraw<'info> {
 		associated_token::authority = owner.to_account_info()
 	)]
 	pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
-	#[account(mut)]
-	pub collateral: Box<Account<'info, TokenAccount>>,
-	/// CHECK:
 	#[account(
 		mut,
-		address = metadata.reserve
+		associated_token::mint = reserve_collateral_mint,
+		associated_token::authority = program_authority,
 	)]
-	pub reserve: AccountInfo<'info>,
+	pub program_collateral_token_account: Box<Account<'info, TokenAccount>>,
+	#[account(
+		mut,
+		address = metadata.reserve,
+	)]
+	pub reserve: Box<Account<'info, SolendReserve>>,
 	/// CHECK:
 	#[account(
 		mut,
@@ -79,15 +81,30 @@ pub struct Withdraw<'info> {
 		seeds::program = metadata.lending_program,
 	)]
 	pub lending_market_authority: AccountInfo<'info>,
-	#[account(mut)]
+	#[account(
+		mut,
+		address = reserve.collateral.mint_pubkey
+	)]
 	pub reserve_collateral_mint: Box<Account<'info, Mint>>,
-	#[account(mut)]
+	#[account(
+		mut,
+		address = reserve.collateral.supply_pubkey
+	)]
 	pub reserve_collateral_supply: Box<Account<'info, TokenAccount>>,
-	#[account(mut)]
+	#[account(
+		mut,
+		address = reserve.liquidity.supply_pubkey
+	)]
 	pub reserve_liquidity_supply: Box<Account<'info, TokenAccount>>,
 	/// CHECK:
+	#[account(
+		address = reserve.liquidity.pyth_oracle_pubkey,
+	)]
 	pub reserve_liquidity_pyth_oracle: AccountInfo<'info>,
 	/// CHECK:
+	#[account(
+		address = reserve.liquidity.switchboard_oracle_pubkey,
+	)]
 	pub reserve_liquidity_switchboard_oracle: AccountInfo<'info>,
 	/// CHECK:
 	#[account(
@@ -108,25 +125,6 @@ pub struct WithdrawParams {
 
 impl<'info> Withdraw<'info> {
 
-	fn validate(&self, amount: u64) -> Result<()> {
-
-		let reserve = Reserve::unpack(*self.reserve.try_borrow_data()?)?;
-
-		if amount > self.user_deposit.amount {
-			return Err(error!(SolscatterError::InsufficientAmount))
-		}
-
-		if reserve.collateral.mint_pubkey != self.collateral.mint{
-			return Err(error!(SolscatterError::InvalidCollateralMint))
-		}
-
-		if self.collateral.owner != *self.program_authority.key{
-			return Err(error!(SolscatterError::InvalidCollateralOwner))
-		}
-
-		Ok(())
-	}
-
 	fn update_state(&mut self, amount: u64) -> Result<()> {
 		let user_deposit = &mut self.user_deposit;
 		user_deposit.amount = user_deposit.amount - amount;
@@ -146,7 +144,7 @@ impl<'info> Withdraw<'info> {
 		invoke(
 			&ix_refresh_reserve_liquidity,
 			&[
-				self.reserve.clone(),
+				self.reserve.to_account_info().clone(),
 				self.reserve_liquidity_pyth_oracle.clone(),
 				self.reserve_liquidity_switchboard_oracle.clone(),
 				self.lending_program.clone(),
@@ -164,7 +162,7 @@ impl<'info> Withdraw<'info> {
 			&ix_refresh_obligation,
 			&[
 				self.obligation.clone(),
-				self.reserve.clone(),
+				self.reserve.to_account_info().clone(),
 				self.clock.to_account_info()
 			]
 		)?;
@@ -173,8 +171,8 @@ impl<'info> Withdraw<'info> {
 			program_id: self.metadata.lending_program,
 			accounts: vec![
 				AccountMeta::new(self.reserve_collateral_supply.key(), false),
-				AccountMeta::new(self.collateral.to_account_info().key(), false),
-				AccountMeta::new(self.reserve.key(), false),
+				AccountMeta::new(self.program_collateral_token_account.to_account_info().key(), false),
+				AccountMeta::new(self.reserve.to_account_info().key(), false),
 				AccountMeta::new(self.obligation.key(), false),
 				AccountMeta::new_readonly(self.lending_market.key(), false),
 				AccountMeta::new_readonly(self.lending_market_authority.key(), false),
@@ -193,8 +191,8 @@ impl<'info> Withdraw<'info> {
 			&ix_withdraw,
 			&[
 				self.reserve_collateral_supply.to_account_info().clone(),
-				self.collateral.to_account_info(),
-				self.reserve.clone(),
+				self.program_collateral_token_account.to_account_info(),
+				self.reserve.to_account_info().clone(),
 				self.obligation.clone(),
 				self.lending_market.clone(),
 				self.lending_market_authority.clone(),
@@ -212,8 +210,10 @@ impl<'info> Withdraw<'info> {
 
 	pub fn withdraw(&mut self, params: WithdrawParams, program_authority_bump: u8) -> Result<()> {
 		let amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
-		
-		self.validate(amount)?;
+
+		if amount > self.user_deposit.amount {
+			return Err(error!(SolscatterError::InsufficientAmount))
+		}
 		
 		self.update_state(amount)?;
 

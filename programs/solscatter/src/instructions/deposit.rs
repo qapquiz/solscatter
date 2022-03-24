@@ -1,17 +1,15 @@
 use crate::{
     seed::*,
-    error::SolscatterError,
     state::{main_state::MainState, user_deposit::UserDeposit, metadata::Metadata},
     token::transfer_token
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
-use solana_program::program_pack::Pack;
 use spl_token_lending::{
-    state::Reserve,
     instruction::deposit_reserve_liquidity_and_obligation_collateral
 };
+use crate::state::SolendReserve;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -54,17 +52,26 @@ pub struct Deposit<'info> {
         associated_token::authority = owner.to_account_info()
     )]
     pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(mut)]
-    pub collateral: Box<Account<'info, TokenAccount>>,
-    /// CHECK:
     #[account(
         mut,
-        address = metadata.reserve
+        associated_token::mint = reserve_collateral_mint,
+        associated_token::authority = program_authority,
     )]
-    pub reserve: AccountInfo<'info>,
-    #[account(mut)]
+    pub program_collateral_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        address = metadata.reserve,
+    )]
+    pub reserve: Box<Account<'info, SolendReserve>>,
+    #[account(
+        mut,
+        address = reserve.liquidity.supply_pubkey
+    )]
     pub reserve_liquidity_supply: Box<Account<'info, TokenAccount>>,
-    #[account(mut)]
+    #[account(
+        mut,
+        address = reserve.collateral.mint_pubkey
+    )]
     pub reserve_collateral_mint: Box<Account<'info, Mint>>,
     /// CHECK:
     #[account(
@@ -87,8 +94,14 @@ pub struct Deposit<'info> {
     )]
     pub obligation: AccountInfo<'info>,
     /// CHECK:
+    #[account(
+        address = reserve.liquidity.pyth_oracle_pubkey,
+    )]
     pub reserve_liquidity_pyth_oracle: AccountInfo<'info>,
     /// CHECK:
+    #[account(
+        address = reserve.liquidity.switchboard_oracle_pubkey,
+    )]
     pub reserve_liquidity_switchboard_oracle: AccountInfo<'info>,
     /// CHECK:
     #[account(
@@ -109,20 +122,6 @@ pub struct DepositParams {
 
 impl<'info> Deposit<'info> {
 
-    fn validate(&mut self) -> Result<()> {
-        let reserve = Reserve::unpack(*self.reserve.try_borrow_data()?)?;
-
-        if reserve.collateral.mint_pubkey != self.collateral.mint{
-            return Err(error!(SolscatterError::InvalidCollateralMint))
-        }
-
-        if self.collateral.owner != *self.program_authority.key{
-            return Err(error!(SolscatterError::InvalidCollateralOwner))
-        }
-
-        Ok(())
-    }
-
     fn update_state(&mut self, amount: u64) -> Result<()> {
         let user_deposit = &mut self.user_deposit;
         user_deposit.amount = user_deposit.amount + amount;
@@ -138,8 +137,8 @@ impl<'info> Deposit<'info> {
             spl_token_lending::id(),
             amount,
             self.program_usdc_token_account.key(),
-            self.collateral.key(),
-            self.reserve.key(),
+            self.program_collateral_token_account.key(),
+            self.reserve.to_account_info().key(),
             self.reserve_liquidity_supply.key(),
             self.reserve_collateral_mint.key(),
             self.lending_market.key(),
@@ -155,8 +154,8 @@ impl<'info> Deposit<'info> {
             &ix,
             &[
                 self.program_usdc_token_account.to_account_info(),
-                self.collateral.to_account_info(),
-                self.reserve.clone(),
+                self.program_collateral_token_account.to_account_info(),
+                self.reserve.to_account_info().clone(),
                 self.reserve_liquidity_supply.to_account_info(),
                 self.reserve_collateral_mint.to_account_info(),
                 self.lending_market.clone(),
@@ -177,7 +176,6 @@ impl<'info> Deposit<'info> {
     }
 
     pub fn deposit(&mut self, params: DepositParams, program_authority_bump: u8) -> Result<()> {
-        self.validate()?;
 
         let deposit_amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
 

@@ -59,11 +59,11 @@ pub struct Initialize<'info> {
     #[account(
         address = reserve.collateral.mint_pubkey,
     )]
-    pub collateral_mint: Box<Account<'info, Mint>>,
+    pub reserve_collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         init_if_needed,
         payer = signer,
-        associated_token::mint = collateral_mint,
+        associated_token::mint = reserve_collateral_mint,
         associated_token::authority = program_authority,
     )]
     pub collateral_token_account: Box<Account<'info, TokenAccount>>,
@@ -130,8 +130,6 @@ impl<'info> Initialize<'info> {
     }
 
     fn initialize_metadata(&mut self) -> Result<()> {
-        self.validate_metadata()?;
-
         let metadata = &mut self.metadata;
         metadata.lending_program = spl_token_lending::id();
         metadata.usdc_mint = self.usdc_mint.key().clone();
@@ -139,21 +137,9 @@ impl<'info> Initialize<'info> {
         metadata.program_authority = self.program_authority.key().clone();
         metadata.obligation = self.obligation.key().clone();
         metadata.reserve = self.reserve.to_account_info().key().clone();
-        metadata.collateral = self.collateral_token_account.to_account_info().key().clone();
+        metadata.collateral_token_account = self.collateral_token_account.to_account_info().key().clone();
         metadata.lending_market = self.reserve.lending_market;
         metadata.lending_market_authority_seed = self.reserve.lending_market;
-
-        Ok(())
-    }
-
-    fn validate_metadata(&self) -> Result<()> {
-        if self.reserve.collateral.mint_pubkey != self.collateral_token_account.mint{
-            return Err(error!(SolscatterError::InvalidCollateralMint))
-        }
-
-        if self.collateral_token_account.owner != *self.program_authority.key{
-            return Err(error!(SolscatterError::InvalidCollateralOwner))
-        }
 
         Ok(())
     }

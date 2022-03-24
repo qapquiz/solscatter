@@ -7,7 +7,7 @@ mod seed;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("XLHiazeuERcG71CALhxbihc73GiPTwbaorMtpHzzesH");
+declare_id!("2DGGNTArZZCY9P1JaAuPn548fWe9hRTM92BgVF8bJgyS");
 
 
 #[program]

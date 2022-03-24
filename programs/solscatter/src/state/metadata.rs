@@ -8,7 +8,7 @@ pub struct Metadata {
 	pub program_authority: Pubkey,
 	pub obligation: Pubkey,
 	pub reserve: Pubkey,
-	pub collateral: Pubkey,
+	pub collateral_token_account: Pubkey,
 	pub lending_market: Pubkey,
 	pub lending_market_authority_seed: Pubkey,
 }

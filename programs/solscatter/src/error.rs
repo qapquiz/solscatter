@@ -8,11 +8,6 @@ pub enum SolscatterError {
     #[msg("number of random numbers must equal to number of rewards")]
     NumberOfRandomNumbersNotMatchWithNumberOfRewards,
     InvalidSwitchboardVrfAccount,
-    #[msg("Invalid collateral mint")]
-    InvalidCollateralMint,
-    #[msg("Invalid collateral owner")]
-    InvalidCollateralOwner,
-    #[msg("Insufficient amount")]
     InsufficientAmount,
     YieldLessOrEqualZero,
     YieldMoreThanTotalDeposit,

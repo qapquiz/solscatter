@@ -1,28 +1,17 @@
 import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
-import { createAssociatedTokenAccount, transfer } from "@solana/spl-token";
-import { clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {Program} from "@project-serum/anchor";
+import {createAssociatedTokenAccount, transfer} from "@solana/spl-token";
 import {
-  parseObligation,
-  parseReserve,
-  refreshObligationInstruction,
-  refreshReserveInstruction,
-  Reserve,
-  SolendMarket,
+    parseReserve,
+    refreshObligationInstruction,
+    refreshReserveInstruction,
+    Reserve,
 } from "@solendprotocol/solend-sdk";
-import BigNumber from "bignumber.js";
-import { assert } from "chai";
-import Decimal from "decimal.js";
-import { Solscatter } from "../target/types/solscatter";
-import {
-  DEVNET_CLUSTER,
-  MAIN_STATE_SEED,
-  METADATA_SEED,
-  PROGRAM_AUTHORITY_SEED,
-  STATE_SEED,
-} from "./constant";
-import { isAccountAlreadyInitialize, loadKeypair } from "./utils";
-import { createVrfAccount } from "./vrf";
+import {assert} from "chai";
+import {Solscatter} from "../target/types/solscatter";
+import {MAIN_STATE_SEED, METADATA_SEED, PROGRAM_AUTHORITY_SEED, STATE_SEED,} from "./constant";
+import {isAccountAlreadyInitialize, loadKeypair} from "./utils";
+import {createVrfAccount} from "./vrf";
 
 type PdaAccount = {
   publicKey: anchor.web3.PublicKey;
