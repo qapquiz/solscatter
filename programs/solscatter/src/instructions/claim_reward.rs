@@ -42,6 +42,7 @@ pub fn handler(ctx: Context<ClaimReward>, round: u64) -> Result<()> {
         return Err(error!(SolscatterError::DrawingIsNotFinished));
     }
 
+    let mut total_receive_amount: u64 = 0;
     let each_reward_amount =  drawing_result.reward_amount / (drawing_result.number_of_rewards as u64);
 
     for option_winner in drawing_result.winners.iter_mut() {
@@ -49,23 +50,7 @@ pub fn handler(ctx: Context<ClaimReward>, round: u64) -> Result<()> {
             Some(winner) => {
                 if winner.pubkey == user.key() && winner.can_claim {
                     // claim
-                    anchor_spl::token::transfer(
-                        CpiContext::new_with_signer(
-                            ctx.accounts.token_program.to_account_info(),
-                            Transfer {
-                                from: ctx.accounts.drawing_reward_token_account.to_account_info(),
-                                to: ctx.accounts.user_token_account.to_account_info(),
-                                authority: ctx.accounts.drawing_pda.to_account_info(),
-                            },
-                            &[&[
-                                b"drawing_pda".as_ref(),
-                                round.to_le_bytes().as_ref(),
-                                &[drawing_pda_bump],
-                            ]]
-                        ),
-                        each_reward_amount,
-                    )?;
-                    
+                    total_receive_amount = total_receive_amount.checked_add(each_reward_amount).unwrap();
                     winner.can_claim = false
                 }
 
@@ -76,7 +61,26 @@ pub fn handler(ctx: Context<ClaimReward>, round: u64) -> Result<()> {
             },
             None => None,
         }
-    } 
+    }
+
+    if total_receive_amount != 0 {
+        anchor_spl::token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.drawing_reward_token_account.to_account_info(),
+                    to: ctx.accounts.user_token_account.to_account_info(),
+                    authority: ctx.accounts.drawing_pda.to_account_info(),
+                },
+                &[&[
+                    b"drawing_pda".as_ref(),
+                    round.to_le_bytes().as_ref(),
+                    &[drawing_pda_bump],
+                ]]
+            ),
+            total_receive_amount,
+        )?;
+    }
 
     Ok(())
 }

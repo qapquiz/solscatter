@@ -140,8 +140,8 @@ impl<'info> Deposit<'info> {
         let user_deposit = &mut self.user_deposit;
 
         let last_deposit_timestamp = match user_deposit.latest_deposit_timestamp {
+            Some(deposit_timestamp) => deposit_timestamp,
             None => current_timestamp,
-            _ => user_deposit.latest_deposit_timestamp.unwrap()
         };
 
         let seconds_diff_from_penalty_period = max((last_deposit_timestamp + penalty_period) - current_timestamp, 0) as f64;

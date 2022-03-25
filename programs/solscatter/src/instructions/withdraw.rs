@@ -212,7 +212,7 @@ impl<'info> Withdraw<'info> {
 		let amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
 		let user_deposit = &self.user_deposit;
 
-		if amount > self.user_deposit.amount {
+		if amount > user_deposit.amount {
 			return Err(error!(SolscatterError::InsufficientAmount))
 		}
 		
