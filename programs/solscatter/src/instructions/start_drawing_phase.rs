@@ -111,6 +111,11 @@ impl<'info> StartDrawingPhase<'info> {
                 }
 
                 if interest_amount >= main_state.total_deposit {
+                    msg!("collateral deposited_amount: {}", deposit.deposited_amount.to_string().as_str());
+                    msg!("liquidity deposited_amount: {}", c_token_exchange_rate.collateral_to_liquidity(deposit.deposited_amount)?.to_string().as_str());
+                    msg!("total_deposit: {}", main_state.total_deposit.to_string().as_str());
+                    msg!("withdraw_collateral_amount: {}", withdraw_collateral_amount.to_string().as_str());
+                    msg!("interest_amount: {}", interest_amount.to_string().as_str());
                     return Err(error!(SolscatterError::YieldMoreThanTotalDeposit));
                 }
 
