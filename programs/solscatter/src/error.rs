@@ -12,4 +12,5 @@ pub enum SolscatterError {
     YieldLessOrEqualZero,
     YieldMoreThanTotalDeposit,
     NoDepositInObligation,
+    DrawingIsNotFinished,
 }

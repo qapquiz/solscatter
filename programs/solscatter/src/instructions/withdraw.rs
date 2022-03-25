@@ -8,7 +8,7 @@ use crate::{
 	seed::*,
 	error::SolscatterError,
 	state::{main_state::MainState, metadata::Metadata, user_deposit::UserDeposit},
-	token::transfer_token
+	instructions::token::transfer_token
 };
 use crate::state::SolendReserve;
 

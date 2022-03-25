@@ -8,7 +8,7 @@ pub struct DrawingResult {
     pub state: DrawingState,
     pub reward_amount: u64,
     pub number_of_rewards: u8,
-    pub winners: Vec<Option<Pubkey>>,
+    pub winners: Vec<Option<Winner>>,
     pub random_numbers: Vec<u64>,
     pub total_deposit: u64,
     pub last_processed_slot: u64,
@@ -25,10 +25,10 @@ impl DrawingResult {
         }
         return Ok(8 + // discriminator
             8 + // round
-            1 + // state
+            DrawingState::LEN + // state
             8 + // reward_amount
             1 + // number_of_rewards
-            4 * (33 * number_of_rewards as usize) + // winners
+            4 * ((1 + Winner::LEN) * number_of_rewards as usize) + // winners
             4 * (8 * number_of_rewards as usize) + // random_numbers
             8 + // total_deposit
             8 + // last_processed_slot
@@ -41,4 +41,18 @@ impl DrawingResult {
 pub enum DrawingState {
     Processing,
     Finished,
+}
+
+impl DrawingState {
+    pub const LEN: usize = 1;
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct Winner {
+    pub pubkey: Pubkey,
+    pub can_claim: bool,
+}
+
+impl Winner {
+    pub const LEN: usize = 32 + 1;
 }

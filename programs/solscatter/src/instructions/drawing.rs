@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::{
     main_state::MainState,
     user_deposit::UserDeposit,
-    drawing_result::{DrawingResult, DrawingState},
+    drawing_result::{DrawingResult, DrawingState, Winner},
 };
 
 #[derive(Accounts)]
@@ -48,7 +48,10 @@ pub fn handler(ctx: Context<Drawing>) -> Result<()> {
             },
             None => {
                 if random_number < user_deposit.amount {
-                    drawing_result.winners[index] = Some(user_deposit.owner);
+                    drawing_result.winners[index] = Some(Winner {
+                        pubkey: user_deposit.owner,
+                        can_claim: true,
+                    });
                     winner_count += 1;
                 }
 

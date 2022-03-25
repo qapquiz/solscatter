@@ -26,7 +26,7 @@ pub mod solscatter {
 
     #[access_control(ctx.accounts.validate(&ctx, &params))]
     pub fn request_randomness(ctx: Context<RequestRanmdomness>, params: RequestRandomnessParams) -> Result<()> {
-        RequestRanmdomness::handler(&ctx, &params)
+        instructions::request_randomness::handler(ctx, params)
     }
 
     pub fn deposit_initialize(ctx: Context<DepositInitialize>) -> Result<()> {
@@ -47,5 +47,9 @@ pub mod solscatter {
 
     pub fn drawing(ctx: Context<Drawing>) -> Result<()> {
         instructions::drawing::handler(ctx)
+    }
+
+    pub fn claim_reward(ctx: Context<ClaimReward>, round: u64) -> Result<()> {
+        instructions::claim_reward::handler(ctx, round)
     }
 }

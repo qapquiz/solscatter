@@ -158,7 +158,7 @@ describe.only("solscatter spec", () => {
         usdcMint: programAccount.usdcReserve.liquidity.mintPubkey,
         usdcTokenAccount: programAccount.programUsdcTokenAccountPubkey,
         reserve: programAccount.usdcReservePubkey,
-        collateralMint: programAccount.usdcReserve.collateral.mintPubkey,
+        reserveCollateralMint: programAccount.usdcReserve.collateral.mintPubkey,
         collateralTokenAccount:
           programAccount.programCollateralTokenAccountPubkey,
         obligation: programAccount.obligationKeypair.publicKey,
@@ -351,7 +351,7 @@ describe.only("solscatter spec", () => {
           usdcMint: programAccount.usdcReserve.liquidity.mintPubkey,
           programUsdcTokenAccount: programAccount.programUsdcTokenAccountPubkey,
           userUsdcTokenAccount: userTokenAccount,
-          collateral: metadata.collateral,
+          programCollateralTokenAccount: metadata.collateralTokenAccount,
           reserve: metadata.reserve,
           reserveLiquiditySupply:
             programAccount.usdcReserve.liquidity.supplyPubkey,
@@ -449,7 +449,7 @@ describe.only("solscatter spec", () => {
         systemProgram: anchor.web3.SystemProgram.programId,
 
         sourceCollateral: programAccount.usdcReserve.collateral.supplyPubkey,
-        destinationCollateral: metadata.collateral,
+        destinationCollateral: metadata.collateralTokenAccount,
         withdrawReserve: metadata.reserve,
 
         obligation: metadata.obligation,

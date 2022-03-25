@@ -1,7 +1,7 @@
 use crate::{
     seed::*,
     state::{main_state::MainState, user_deposit::UserDeposit, metadata::Metadata},
-    token::transfer_token
+    instructions::token::transfer_token
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::*;
