@@ -3,11 +3,12 @@ mod events;
 mod instructions;
 mod state;
 mod seed;
+mod duration;
 
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("2DGGNTArZZCY9P1JaAuPn548fWe9hRTM92BgVF8bJgyS");
+declare_id!("BzxshYSrD3KdLeQHMpXFPdgtfcwUUky5jeBefFbYqrxd");
 
 
 #[program]

@@ -43,6 +43,7 @@ pub fn handler(ctx: Context<DepositInitialize>) -> Result<()> {
 
     user_deposit.slot = main_state.current_slot + 1;
     user_deposit.amount = 0;
+    user_deposit.penalty_fee = main_state.penalty_fee;
     user_deposit.owner = depositor.key().clone();
     user_deposit.latest_deposit_timestamp = None;
     user_deposit_reference.slot = main_state.current_slot + 1;

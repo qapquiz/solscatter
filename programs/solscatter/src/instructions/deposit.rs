@@ -10,6 +10,7 @@ use spl_token_lending::{
     instruction::deposit_reserve_liquidity_and_obligation_collateral
 };
 use crate::state::SolendReserve;
+use std::cmp::{max};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -125,10 +126,36 @@ impl<'info> Deposit<'info> {
     fn update_state(&mut self, amount: u64) -> Result<()> {
         let user_deposit = &mut self.user_deposit;
         user_deposit.amount = user_deposit.amount + amount;
-        user_deposit.latest_deposit_timestamp = Some(self.clock.unix_timestamp);
 
         let main_state = &mut self.main_state;
         main_state.total_deposit = main_state.total_deposit + amount;
+
+        self.update_penalty_fee(amount)
+    }
+
+    fn update_penalty_fee(&mut self, amount: u64) -> Result<()> {
+        let current_timestamp = self.clock.unix_timestamp;
+        let penalty_period = self.main_state.penalty_period;
+        let penalty_fee = self.main_state.penalty_fee;
+        let user_deposit = &mut self.user_deposit;
+
+        let last_deposit_timestamp = match user_deposit.latest_deposit_timestamp {
+            None => current_timestamp,
+            _ => user_deposit.latest_deposit_timestamp.unwrap()
+        };
+
+        let seconds_diff_from_penalty_period = max((last_deposit_timestamp + penalty_period) - current_timestamp, 0) as f64;
+
+        let previous_penalty_fee = (seconds_diff_from_penalty_period / penalty_period as f64) * user_deposit.penalty_fee;
+
+        let new_penalty_fee = ((user_deposit.amount as f64 * previous_penalty_fee) + (amount as f64 * penalty_fee)) / (user_deposit.amount + amount) as f64;
+
+        msg!("previous_penalty_fee : {} ", previous_penalty_fee);
+        msg!("new_penalty_fee : {} ", new_penalty_fee);
+
+        user_deposit.penalty_fee = new_penalty_fee;
+        user_deposit.latest_deposit_timestamp = Some(current_timestamp);
+
         Ok(())
     }
 

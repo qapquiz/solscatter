@@ -210,6 +210,7 @@ impl<'info> Withdraw<'info> {
 
 	pub fn withdraw(&mut self, params: WithdrawParams, program_authority_bump: u8) -> Result<()> {
 		let amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
+		let user_deposit = &self.user_deposit;
 
 		if amount > self.user_deposit.amount {
 			return Err(error!(SolscatterError::InsufficientAmount))
@@ -219,8 +220,11 @@ impl<'info> Withdraw<'info> {
 
 		self.withdraw_from_platform(amount, program_authority_bump)?;
 
-		let fee = spl_token::ui_amount_to_amount(params.ui_amount * 0.5, params.decimals);
-		let withdraw_amount = amount - fee;
+		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100_f64;
+		let fee_amount = spl_token::ui_amount_to_amount(params.ui_amount * fee, params.decimals);
+		let withdraw_amount = amount - fee_amount;
+
+		msg!("fee_amount {} ", fee_amount);
 
 		transfer_token(
 			self.program_usdc_token_account.to_account_info(),
