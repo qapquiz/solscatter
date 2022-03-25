@@ -47,4 +47,8 @@ pub mod solscatter {
     pub fn drawing(ctx: Context<Drawing>) -> Result<()> {
         instructions::drawing::handler(ctx)
     }
+
+    pub fn claim_reward(ctx: Context<ClaimReward>, round: u64) -> Result<()> {
+        instructions::claim_reward::handler(ctx, round)
+    }
 }
