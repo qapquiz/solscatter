@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{token::{TokenAccount, Mint, Token}, associated_token::AssociatedToken};
-use crate::{state::{drawing_result::{DrawingResult, DrawingState}, main_state::MainState, SolendObligation, SolendReserve}, instructions::solend_withdraw::solend_withdraw};
+use crate::{state::{VrfClientState, drawing_result::{DrawingResult, DrawingState}, main_state::MainState, SolendObligation, SolendReserve}, instructions::solend_withdraw::solend_withdraw};
 use crate::error::SolscatterError;
 use crate::seed::PROGRAM_AUTHORITY_SEED;
 
@@ -9,6 +9,7 @@ use super::solend_withdraw::SolendWithdraw;
 #[derive(Accounts)]
 #[instruction(number_of_rewards: u8, random_numbers: Vec<u64>)]
 pub struct StartDrawingPhase<'info> {
+    pub state: AccountLoader<'info, VrfClientState>,
     #[account(
         init,
         payer = signer,
@@ -161,18 +162,28 @@ pub fn handler(ctx: Context<StartDrawingPhase>, number_of_rewards: u8, random_nu
         return Err(error!(SolscatterError::NumberOfRandomNumbersNotMatchWithNumberOfRewards));
     }
 
+    let main_state = &ctx.accounts.main_state;
+
+    let state = &ctx.accounts.state.load()?;
+    let result_buffer = state.result_buffer;
+    let value: &[u128] = bytemuck::cast_slice(&result_buffer[..]);
+    msg!("u128 buffer {:?}", value);
+    let result = value[0] % main_state.total_deposit as u128;
+    msg!("Current VRF Value [0 - {}] = {}!", main_state.total_deposit, result);
+    let random_numbers_from_vrf = vec![result as u64];
+
     let program_authority_bump = *ctx.bumps.get("obligation_owner").unwrap();
 
     let reward_amount = ctx.accounts.claim_reward(program_authority_bump)?;
 
-    let main_state = &ctx.accounts.main_state;
     let drawing_result = &mut ctx.accounts.drawing_result;
     drawing_result.round = main_state.current_round;
     drawing_result.state = DrawingState::Processing;
     drawing_result.reward_amount = reward_amount;
     drawing_result.number_of_rewards = number_of_rewards;
     drawing_result.winners = vec!(); 
-    drawing_result.random_numbers = random_numbers;
+    // drawing_result.random_numbers = random_numbers;
+    drawing_result.random_numbers = random_numbers_from_vrf;
     drawing_result.total_deposit = main_state.total_deposit;
     drawing_result.last_processed_slot = 0;
     drawing_result.finished_timestamp = None;

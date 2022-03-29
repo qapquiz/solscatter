@@ -5,11 +5,10 @@ mod state;
 mod seed;
 mod duration;
 
-use anchor_lang::prelude::*;
 use instructions::*;
+use anchor_lang::prelude::*;
 
-declare_id!("BzxshYSrD3KdLeQHMpXFPdgtfcwUUky5jeBefFbYqrxd");
-
+declare_id!("8LAECVkCzJg9RpoZkJWTX3jeyxYM7BkDguCGf7tzTgvU");
 
 #[program]
 pub mod solscatter {

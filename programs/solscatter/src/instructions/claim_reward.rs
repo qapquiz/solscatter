@@ -8,6 +8,7 @@ use crate::{state::{DrawingResult, DrawingState, Winner}, error::SolscatterError
 pub struct ClaimReward<'info> {
     pub collateral_mint: Account<'info, Mint>,
     #[account(
+        mut,
         seeds = [b"drawing_result".as_ref(), round.to_le_bytes().as_ref()],
         bump,
     )]
@@ -19,6 +20,7 @@ pub struct ClaimReward<'info> {
     )]
     pub drawing_pda: AccountInfo<'info>,
     #[account(
+        mut,
         associated_token::mint = collateral_mint,
         associated_token::authority = drawing_pda,
     )]
@@ -26,6 +28,7 @@ pub struct ClaimReward<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(
+        mut,
         associated_token::mint = collateral_mint,
         associated_token::authority = user
     )]

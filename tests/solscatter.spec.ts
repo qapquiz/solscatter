@@ -1,17 +1,29 @@
 import * as anchor from "@project-serum/anchor";
-import {Program} from "@project-serum/anchor";
-import {createAssociatedTokenAccount, transfer} from "@solana/spl-token";
+import { Program } from "@project-serum/anchor";
+import { createAssociatedTokenAccount, transfer } from "@solana/spl-token";
 import {
-    parseReserve,
-    refreshObligationInstruction,
-    refreshReserveInstruction,
-    Reserve,
+  parseReserve,
+  refreshObligationInstruction,
+  refreshReserveInstruction,
+  Reserve,
 } from "@solendprotocol/solend-sdk";
-import {assert} from "chai";
-import {Solscatter} from "../target/types/solscatter";
-import {MAIN_STATE_SEED, METADATA_SEED, PROGRAM_AUTHORITY_SEED, STATE_SEED,} from "./constant";
-import {isAccountAlreadyInitialize, loadKeypair} from "./utils";
-import {createVrfAccount} from "./vrf";
+import {
+  loadSwitchboardProgram,
+  OracleQueueAccount,
+  PermissionAccount,
+  ProgramStateAccount,
+  VrfAccount,
+} from "@switchboard-xyz/switchboard-v2";
+import { assert } from "chai";
+import { Solscatter } from "../target/types/solscatter";
+import {
+  MAIN_STATE_SEED,
+  METADATA_SEED,
+  PROGRAM_AUTHORITY_SEED,
+  STATE_SEED,
+} from "./constant";
+import { isAccountAlreadyInitialize, loadKeypair } from "./utils";
+import { createVrfAccount } from "./vrf";
 
 type PdaAccount = {
   publicKey: anchor.web3.PublicKey;
@@ -124,7 +136,7 @@ describe.only("solscatter spec", () => {
     };
   });
 
-  it("should create VrfAccount", async () => {
+  it.skip("should create VrfAccount", async () => {
     const isVrfInitialize = await isAccountAlreadyInitialize(
       program.provider.connection,
       programAccount.vrfKeypair.publicKey
@@ -138,7 +150,7 @@ describe.only("solscatter spec", () => {
     await createVrfAccount(program, programAccount.vrfKeypair);
   });
 
-  it("should initialize", async () => {
+  it.skip("should initialize", async () => {
     const isProgramInitialize = await isAccountAlreadyInitialize(
       program.provider.connection,
       programAccount.mainStatePda.publicKey
@@ -179,7 +191,7 @@ describe.only("solscatter spec", () => {
     console.log("initialize tx:", tx);
   });
 
-  it("should user request faucet from cli", async () => {
+  it.skip("should user request faucet from cli", async () => {
     for (const userKeypair of userKeypairs) {
       const userTokenAccount = await anchor.utils.token.associatedAddress({
         mint: programAccount.usdcReserve.liquidity.mintPubkey,
@@ -231,7 +243,7 @@ describe.only("solscatter spec", () => {
     }
   });
 
-  it("should deposit_initialize each user", async () => {
+  it.skip("should deposit_initialize each user", async () => {
     for (const userKeypair of userKeypairs) {
       const mainState = await program.account.mainState.fetch(
         programAccount.mainStatePda.publicKey
@@ -295,7 +307,7 @@ describe.only("solscatter spec", () => {
     }
   });
 
-  it("should deposit 1-3 USDC each user", async () => {
+  it.skip("should deposit 1-3 USDC each user", async () => {
     const randomMin = 1;
     const randomMax = 3;
     const metadata = await program.account.metadata.fetch(
@@ -378,7 +390,89 @@ describe.only("solscatter spec", () => {
     }
   });
 
-  it("should start_drawing_phase", async () => {
+  it.skip("request randomness", async () => {
+    const vrfSecret = loadKeypair("./secrets/vrf-keypair.json");
+    const switchboardProgram = await loadSwitchboardProgram("devnet");
+
+    const [stateAccountPda, stateBump] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from(STATE_SEED),
+          vrfSecret.publicKey.toBuffer(),
+          program.provider.wallet.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
+    const vrfAccount = new VrfAccount({
+      program: switchboardProgram,
+      publicKey: vrfSecret.publicKey,
+    });
+
+    const vrfClientState = (await program.account.vrfClientState.all())[0];
+    const vrf = await vrfAccount.loadData();
+    const queueAccount = new OracleQueueAccount({
+      program: switchboardProgram,
+      publicKey: vrf.oracleQueue,
+    });
+    const queue = await queueAccount.loadData();
+    const queueAuthority = queue.authority;
+    const dataBuffer = queue.dataBuffer;
+    const escrow = vrf.escrow;
+    const [programStateAccount, programStateBump] =
+      ProgramStateAccount.fromSeed(switchboardProgram);
+    const [permissionAccount, permissionBump] = PermissionAccount.fromSeed(
+      switchboardProgram,
+      queueAuthority,
+      queueAccount.publicKey,
+      vrfClientState.account.vrf
+    );
+    try {
+      await permissionAccount.loadData();
+    } catch {
+      throw new Error(
+        "A requested permission pda account has not been initialized."
+      );
+    }
+
+    const switchTokenMint = await programStateAccount.getTokenMint();
+    const payerTokenAccount =
+      await switchTokenMint.getOrCreateAssociatedAccountInfo(
+        program.provider.wallet.publicKey
+      );
+    const requestTxn = await program.rpc.requestRandomness(
+      {
+        clientStateBump: stateBump,
+        permissionBump: permissionBump,
+        switchboardStateBump: programStateBump,
+      },
+      {
+        accounts: {
+          state: vrfClientState.publicKey,
+          authority: program.provider.wallet.publicKey,
+          switchboardProgram: switchboardProgram.programId,
+          vrf: vrfClientState.account.vrf,
+          oracleQueue: queueAccount.publicKey,
+          queueAuthority,
+          dataBuffer,
+          permission: permissionAccount.publicKey,
+          escrow,
+          payerWallet: payerTokenAccount.address,
+          payerAuthority: program.provider.wallet.publicKey,
+          recentBlockhashes: anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+          programState: programStateAccount.publicKey,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        },
+        signers: [
+          program.provider.wallet["payer"],
+          program.provider.wallet["payer"],
+        ],
+      }
+    );
+    console.log(`https://solscan.io/tx/${requestTxn}?cluster=devnet`);
+  });
+
+  it.skip("should start_drawing_phase", async () => {
     const mainState = await program.account.mainState.fetch(
       programAccount.mainStatePda.publicKey
     );
@@ -422,51 +516,118 @@ describe.only("solscatter spec", () => {
       ),
     ];
 
-    const startDrawingPhaseTx = await program.rpc.startDrawingPhase(numberOfRewards, randomNumbers, {
-      preInstructions: [
-        refreshReserveInstruction(
-          metadata.reserve,
-          metadata.lendingProgram,
-          programAccount.usdcReserve.liquidity["pythOracle"],
-          programAccount.usdcReserve.liquidity["switchboardOracle"]
-        ),
-        refreshObligationInstruction(
-          obligationKeypair.publicKey,
-          [metadata.reserve],
-          [],
-          metadata.lendingProgram
-        ),
-      ],
-      accounts: {
-        drawingResult: drawingResultPda,
-        mainState: programAccount.mainStatePda.publicKey,
-        collateralMint: metadata.usdcMint,
-        drawingPda: drawingPda,
-        drawingRewardTokenAccount: drawingRewardTokenAccount,
-        signer: program.provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
+    const startDrawingPhaseTx = await program.rpc.startDrawingPhase(
+      numberOfRewards,
+      randomNumbers,
+      {
+        preInstructions: [
+          refreshReserveInstruction(
+            metadata.reserve,
+            metadata.lendingProgram,
+            programAccount.usdcReserve.liquidity["pythOracle"],
+            programAccount.usdcReserve.liquidity["switchboardOracle"]
+          ),
+          refreshObligationInstruction(
+            obligationKeypair.publicKey,
+            [metadata.reserve],
+            [],
+            metadata.lendingProgram
+          ),
+        ],
+        accounts: {
+          state: programAccount.stateAccountPda.publicKey,
+          drawingResult: drawingResultPda,
+          mainState: programAccount.mainStatePda.publicKey,
+          collateralMint: metadata.usdcMint,
+          drawingPda: drawingPda,
+          drawingRewardTokenAccount: drawingRewardTokenAccount,
+          signer: program.provider.wallet.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
 
-        sourceCollateral: programAccount.usdcReserve.collateral.supplyPubkey,
-        destinationCollateral: metadata.collateralTokenAccount,
-        withdrawReserve: metadata.reserve,
+          sourceCollateral: programAccount.usdcReserve.collateral.supplyPubkey,
+          destinationCollateral: metadata.collateralTokenAccount,
+          withdrawReserve: metadata.reserve,
 
-        obligation: metadata.obligation,
-        lendingMarket: programAccount.usdcReserve.lendingMarket,
-        lendingMarketAuthority: lendingMarketAuthority,
-        destinationLiquidity: drawingRewardTokenAccount,
-        reserveCollateralMint: programAccount.usdcReserve.collateral.mintPubkey,
-        reserveLiquiditySupply:
-          programAccount.usdcReserve.liquidity.supplyPubkey,
-        obligationOwner: metadata.programAuthority,
-        transferAuthority: metadata.programAuthority,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-        solendProgramAddress: metadata.lendingProgram,
-      },
-    });
+          obligation: metadata.obligation,
+          lendingMarket: programAccount.usdcReserve.lendingMarket,
+          lendingMarketAuthority: lendingMarketAuthority,
+          destinationLiquidity: drawingRewardTokenAccount,
+          reserveCollateralMint:
+            programAccount.usdcReserve.collateral.mintPubkey,
+          reserveLiquiditySupply:
+            programAccount.usdcReserve.liquidity.supplyPubkey,
+          obligationOwner: metadata.programAuthority,
+          transferAuthority: metadata.programAuthority,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          solendProgramAddress: metadata.lendingProgram,
+        },
+      }
+    );
 
     console.log("startDrawingPhaseTx:", startDrawingPhaseTx);
+  });
+
+  it("check randomness", async () => {
+    const vrfClientState = (await program.account.vrfClientState.all())[0];
+    console.log(vrfClientState.account);
+    console.log(vrfClientState.account.lastTimestamp.toNumber());
+  });
+
+  it.skip("check winner", async () => {
+    const mainState = await program.account.mainState.fetch(programAccount.mainStatePda.publicKey);
+    const currentRound = mainState.currentRound.sub(new anchor.BN(1));
+    const [drawingResultPda] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from("drawing_result"),
+        Buffer.from(currentRound.toArray("le", 8)),
+      ],
+      program.programId
+    );
+    const drawingResult = await program.account.drawingResult.fetch(
+      drawingResultPda
+    );
+
+    console.log(drawingResult);
+    console.log(drawingResult.winners[0].pubkey.toBase58());
+  });
+
+  it("drawing each user", async () => {
+    const mainState = await program.account.mainState.fetch(programAccount.mainStatePda.publicKey);
+    const currentSlot = mainState.currentSlot.toNumber();
+    const currentRound = mainState.currentRound;
+    const [drawingResultPda] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from("drawing_result"),
+        Buffer.from(currentRound.toArray("le", 8)),
+      ],
+      program.programId
+    );
+    const drawingResult = await program.account.drawingResult.fetch(
+      drawingResultPda
+    );
+
+    const lastProcessedSlot = drawingResult.lastProcessedSlot.toNumber();
+
+    for (let processSlot = lastProcessedSlot + 1; processSlot <= currentSlot; processSlot++) {
+      const [userDepositPda] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from((new anchor.BN(processSlot)).toArray("le", 8))],
+        program.programId,
+      );
+
+      const drawingTx = await program.rpc.drawing({
+        accounts: {
+          mainState: programAccount.mainStatePda.publicKey,
+          drawingResult: drawingResultPda,
+          userDeposit: userDepositPda,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        }
+      });
+
+      console.log("processSlot:", processSlot);
+      console.log("drawingTx:", drawingTx);
+    }
   });
 });
