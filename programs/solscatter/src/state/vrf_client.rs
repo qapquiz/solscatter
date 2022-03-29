@@ -10,6 +10,10 @@ pub struct VrfClientState {
     pub last_timestamp: i64,
 }
 
+impl VrfClientState {
+    pub const LEN: usize = 8 + 32 + 8 + 32 + (1 * 32) + 16 + 8;
+}
+
 impl Default for VrfClientState {
     fn default() -> Self {
         unsafe { std::mem::zeroed() }

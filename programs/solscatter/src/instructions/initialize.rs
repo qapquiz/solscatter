@@ -71,6 +71,7 @@ pub struct Initialize<'info> {
             signer.to_account_info().key().as_ref(),
         ],
         bump,
+        space = VrfClientState::LEN,
     )]
     pub vrf_client_state: AccountLoader<'info, VrfClientState>,
     /// CHECK: This is our VrfAccountData
