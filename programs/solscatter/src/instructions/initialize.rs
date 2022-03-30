@@ -2,7 +2,7 @@ use crate::{
     seed::*,
     duration::*,
     error::SolscatterError,
-    state::{main_state::MainState, VrfClientState},
+    state::{MainState, Metadata, VrfClientState},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{token::{TokenAccount, Mint}, associated_token::AssociatedToken};
@@ -20,11 +20,17 @@ pub struct Initialize<'info> {
         bump,
     )]
     pub main_state: Account<'info, MainState>,
+    #[account(
+        init,
+        payer = signer,
+        space = Metadata::LEN,
+        seeds = [METADATA_SEED],
+        bump,
+    )]
+    pub metadata: Account<'info, Metadata>,
     /// CHECK: platform_authority will stake token on behalf of user to collect all yield
     #[account(
-        seeds = [
-            PLATFORM_AUTHORITY_SEED,
-        ],
+        seeds = [PLATFORM_AUTHORITY_SEED],
         bump
     )]
     pub platform_authority: AccountInfo<'info>,
@@ -114,9 +120,21 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 
+    fn initialize_metadata(&mut self) -> Result<()> {
+        let metadata = &mut self.metadata;
+        metadata.yi_underlying_mint = self.yi_underlying_mint.key();
+        metadata.yi_underlying_token_account = self.yi_underlying_token_account.to_account_info().key();
+        metadata.yi_mint = self.yi_mint.key();
+        metadata.yi_mint_token_account = self.yi_mint_token_account.to_account_info().key();
+        metadata.platform_authority = self.platform_authority.key();
+        Ok(())
+
+    }
+
     pub fn initialize(&mut self) -> Result<()> {
         self.initialize_vrf()?;
         self.initialize_main_state()?;
+        self.initialize_metadata()?;
         Ok(())
     }
 }
