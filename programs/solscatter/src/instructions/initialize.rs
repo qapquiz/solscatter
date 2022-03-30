@@ -1,5 +1,10 @@
 use crate::{
-    seed::*,
+    seed::{
+        MAIN_STATE_SEED,
+        PLATFORM_AUTHORITY_SEED,
+        MINER_SEED,
+        STATE_SEED,
+    },
     duration::*,
     error::SolscatterError,
     state::{main_state::MainState, VrfClientState},
@@ -7,6 +12,7 @@ use crate::{
 use anchor_lang::prelude::*;
 use anchor_spl::{token::{TokenAccount, Mint}, associated_token::AssociatedToken};
 use anchor_spl::token::Token;
+use quarry_mine::{cpi::accounts::CreateMiner, Quarry, Rewarder};
 use solana_program::pubkey;
 use switchboard_v2::VrfAccountData;
 
@@ -30,7 +36,6 @@ pub struct Initialize<'info> {
     pub platform_authority: AccountInfo<'info>,
 
     // ######### YIELD GENERATOR #########
-
     // DEVNET MINT = 5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA
     #[account(
         address = pubkey!("5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA"),
@@ -56,11 +61,37 @@ pub struct Initialize<'info> {
         associated_token::authority = platform_authority,
     )]
     pub yi_underlying_token_account: Account<'info, TokenAccount>,
-
     // ######### END YIELD GENERATOR #########
 
+    // ######### QUARRY #########
+    /// CHECK: this is quarry program already checked with address =
+    #[account(
+        address = quarry_mine::id(),
+    )]
+    pub quarry_program: AccountInfo<'info>,
+    /// CHECK: this is miner check with seed it will init with Quarry program
+    #[account(
+        mut,
+        seeds = [
+            MINER_SEED.as_ref(),
+            quarry.key().to_bytes().as_ref(),
+            platform_authority.key().to_bytes().as_ref(),
+        ],
+        bump,
+    )]
+    pub miner: AccountInfo<'info>,
+    #[account(mut)]
+    pub quarry: Box<Account<'info, Quarry>>,
+    pub rewarder: Box<Account<'info, Rewarder>>,
+    #[account(
+        mut,
+        associated_token::mint = yi_mint,
+        associated_token::authority = miner,
+    )]
+    pub miner_vault: Box<Account<'info, TokenAccount>>,
+    // ######### END QUARRY #########
+
     // ######### SWITCHBOARD VRF #########
-    
     #[account(
         init,
         payer = signer,
@@ -94,6 +125,23 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 
+    pub fn into_create_miner_cpi_context(&self) -> CpiContext<'_, '_, '_, 'info, CreateMiner<'info>> {
+        CpiContext::new(
+            self.quarry_program.to_account_info(),
+            CreateMiner {
+                authority: self.platform_authority.to_account_info(),
+                miner: self.miner.to_account_info(),
+                quarry: self.quarry.to_account_info(),
+                rewarder: self.rewarder.to_account_info(),
+                system_program: self.system_program.to_account_info(),
+                payer: self.signer.to_account_info(),
+                token_mint: self.yi_mint.to_account_info(),
+                miner_vault: self.miner_vault.to_account_info(),
+                token_program: self.token_program.to_account_info(),
+            },
+        )
+    }
+
     fn initialize_vrf(&mut self) -> Result<()> {
         let state = &mut self.vrf_client_state.load_init()?;
         state.max_result = u64::MAX;
@@ -101,6 +149,14 @@ impl<'info> Initialize<'info> {
         state.authority = self.signer.to_account_info().key().clone(); 
         Ok(())
     }
+
+    fn initialize_quarry(&self, platform_authority_bump: u8, miner_bump: u8) -> Result<()> {
+        quarry_mine::cpi::create_miner(
+            self.into_create_miner_cpi_context()
+                .with_signer(&[&[PLATFORM_AUTHORITY_SEED, &[platform_authority_bump]]]),
+            miner_bump 
+        )
+    } 
 
     fn initialize_main_state(&mut self) -> Result<()> {
         let main_state = &mut self.main_state;
@@ -114,13 +170,16 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 
-    pub fn initialize(&mut self) -> Result<()> {
+    pub fn initialize(&mut self, platform_authority_bump: u8, miner_bump: u8) -> Result<()> {
         self.initialize_vrf()?;
+        self.initialize_quarry(platform_authority_bump, miner_bump)?;
         self.initialize_main_state()?;
         Ok(())
     }
 }
 
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
-    ctx.accounts.initialize()
+    let platform_authority_bump = *ctx.bumps.get("platform_authority").unwrap();
+    let miner_bump = *ctx.bumps.get("miner").unwrap();
+    ctx.accounts.initialize(platform_authority_bump, miner_bump)
 }

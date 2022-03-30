@@ -8,8 +8,7 @@ mod duration;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("DFyrxbvQJANhzH8Q6xLYFfEVKRyF6HzhVeWKGYjGzCfS");
-
+declare_id!("78WNnu3fBhSDtt8mFzy49GrPGhybffqdZjqc9eLo8rX9");
 
 #[program]
 pub mod solscatter {
