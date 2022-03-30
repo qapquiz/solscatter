@@ -66,7 +66,7 @@ pub struct Initialize<'info> {
     // ######### QUARRY #########
     /// CHECK: this is quarry program already checked with address =
     #[account(
-        address = quarry_mine::id(),
+        address = quarry_mine::program::QuarryMine::id(),
     )]
     pub quarry_program: AccountInfo<'info>,
     /// CHECK: this is miner check with seed it will init with Quarry program
