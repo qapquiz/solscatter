@@ -26,7 +26,7 @@ pub struct Initialize<'info> {
         seeds = [MAIN_STATE_SEED],
         bump,
     )]
-    pub main_state: Account<'info, MainState>,
+    pub main_state: Box<Account<'info, MainState>>,
     #[account(
         init,
         payer = signer,
@@ -34,7 +34,7 @@ pub struct Initialize<'info> {
         seeds = [METADATA_SEED],
         bump,
     )]
-    pub metadata: Account<'info, Metadata>,
+    pub metadata: Box<Account<'info, Metadata>>,
     /// CHECK: platform_authority will stake token on behalf of user to collect all yield
     #[account(
         seeds = [PLATFORM_AUTHORITY_SEED],
@@ -184,6 +184,7 @@ impl<'info> Initialize<'info> {
         metadata.yi_mint = self.yi_mint.key();
         metadata.yi_mint_token_account = self.yi_mint_token_account.to_account_info().key();
         metadata.platform_authority = self.platform_authority.key();
+        metadata.quarry_miner = self.miner.key();
         Ok(())
     }
 
