@@ -1,6 +1,6 @@
 use crate::{
+    seed::*,
     state::{MainState, UserDeposit},
-    MAIN_STATE_SEED, PLATFORM_AUTHORITY_SEED,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};

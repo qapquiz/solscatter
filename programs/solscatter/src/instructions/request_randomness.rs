@@ -1,4 +1,4 @@
-use crate::STATE_SEED;
+use crate::seed::*;
 use crate::state::VrfClientState;
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;

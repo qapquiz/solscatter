@@ -1,7 +1,6 @@
 use crate::{
-    MAIN_STATE_SEED,
-    STATE_SEED,
-    PLATFORM_AUTHORITY_SEED,
+    seed::*,
+    duration::*,
     error::SolscatterError,
     state::{main_state::MainState, VrfClientState},
 };
@@ -109,6 +108,9 @@ impl<'info> Initialize<'info> {
         main_state.current_round = 1;
         main_state.total_deposit = 0;
         main_state.vrf_account_pubkey = self.vrf_account_info.key();
+        main_state.penalty_period = 7 * SECS_PER_DAY;
+        main_state.penalty_fee = 5_f64;
+        main_state.default_fee = 1_f64;
         Ok(())
     }
 

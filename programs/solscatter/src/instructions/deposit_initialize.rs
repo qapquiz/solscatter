@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{TokenAccount, Mint, Token};
-use crate::MAIN_STATE_SEED;
+use crate::seed::*;
 use crate::state::user_deposit::UserDeposit;
 use crate::state::main_state::MainState;
 
