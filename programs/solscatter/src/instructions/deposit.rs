@@ -11,7 +11,7 @@ use yi::{cpi::accounts::Stake, YiToken};
 pub struct Deposit<'info> {
     /// CHECK: platform authority
     #[account(
-        seeds = [PLATFORM_AUTHORITY_SEED],
+        seeds = [PLATFORM_AUTHORITY_SEED.as_bytes()],
         bump,
     )]
     pub platform_authority: AccountInfo<'info>,
@@ -27,7 +27,7 @@ pub struct Deposit<'info> {
     // ######## PROGRAM STATE ########
     #[account(
         mut,
-        seeds = [MAIN_STATE_SEED],
+        seeds = [MAIN_STATE_SEED.as_bytes()],
         bump,
     )]
     pub main_state: Box<Account<'info, MainState>>,
@@ -108,7 +108,7 @@ impl<'info> Deposit<'info> {
         // platform stake yi_underlying to solUST
         yi::cpi::stake(
             self.into_stake_cpi_context()
-                .with_signer(&[&[PLATFORM_AUTHORITY_SEED, &[platform_authority_bump]]]),
+                .with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
             amount,
         )
     }

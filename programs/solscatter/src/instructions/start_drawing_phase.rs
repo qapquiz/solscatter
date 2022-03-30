@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::state::{drawing_result::{DrawingResult, DrawingState}, main_state::MainState};
 use crate::error::SolscatterError;
+use crate::seed::{DRAWING_RESULT_SEED, MAIN_STATE_SEED};
 
 #[derive(Accounts)]
 #[instruction(number_of_rewards: u8, random_numbers: Vec<u64>)]
@@ -10,14 +11,14 @@ pub struct StartDrawingPhase<'info> {
         payer = signer,
         space = DrawingResult::space(number_of_rewards)?,
         seeds = [
-            b"drawing_result", 
+            DRAWING_RESULT_SEED.as_bytes(),
             main_state.current_round.to_le_bytes().as_ref(),
         ],
         bump,
     )]
     pub drawing_result: Account<'info, DrawingResult>,
     #[account(
-        seeds = [b"main_state"],
+        seeds = [MAIN_STATE_SEED.as_bytes()],
         bump
     )]
     pub main_state: Account<'info, MainState>,
