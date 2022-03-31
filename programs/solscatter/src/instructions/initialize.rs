@@ -93,8 +93,14 @@ pub struct Initialize<'info> {
         bump,
     )]
     pub miner: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(
+        mut,
+        address = pubkey!("5pE3ch5haoHp7wYKdsbKJwrNZzeuXr5nCj6Nn2JQf4JS")
+    )]
     pub quarry: Box<Account<'info, Quarry>>,
+    #[account(
+        address = quarry.rewarder_key,
+    )]
     pub rewarder: Box<Account<'info, Rewarder>>,
     #[account(
         mut,
@@ -119,15 +125,17 @@ pub struct Initialize<'info> {
     pub vrf_client_state: AccountLoader<'info, VrfClientState>,
     /// CHECK: This is our VrfAccountData
     pub vrf_account_info: AccountInfo<'info>,
-    
     // ######### END SWITCHBOARD VRF #########
 
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    // ######## NATIVE PROGRAM ########
     pub rent: Sysvar<'info, Rent>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    // ######## END NATIVE PROGRAM ########
 }
 
 impl<'info> Initialize<'info> {
@@ -190,7 +198,10 @@ impl<'info> Initialize<'info> {
         metadata.yi_mint = self.yi_mint.key();
         metadata.yi_mint_token_account = self.yi_mint_token_account.to_account_info().key();
         metadata.platform_authority = self.platform_authority.key();
+        metadata.quarry = self.quarry.key();
         metadata.quarry_miner = self.miner.key();
+        metadata.quarry_miner_vault = self.miner_vault.key();
+        metadata.quarry_rewarder = self.rewarder.key();
         Ok(())
     }
 
