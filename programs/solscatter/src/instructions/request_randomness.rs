@@ -10,7 +10,7 @@ pub struct RequestRanmdomness<'info> {
     #[account(
         mut,
         seeds = [
-            STATE_SEED, 
+            STATE_SEED.as_bytes(), 
             vrf.key().as_ref(),
             authority.key().as_ref(),
         ],
@@ -86,7 +86,7 @@ impl RequestRanmdomness<'_> {
         let vrf_key = ctx.accounts.vrf.key.clone();
         let authority_key = ctx.accounts.authority.key.clone();
         let state_seeds: &[&[&[u8]]] = &[&[
-            &STATE_SEED,
+            STATE_SEED.as_bytes(),
             vrf_key.as_ref(),
             authority_key.as_ref(),
             &[params.client_state_bump],

@@ -7,13 +7,15 @@ use crate::state::main_state::MainState;
 use crate::state::UserDepositReference;
 
 #[derive(Accounts)]
+#[instruction(_slot_number: u64)]
 pub struct DepositInitialize<'info> {
     #[account(
         init,
         payer = depositor,
-        seeds = [(main_state.current_slot + 1).to_le_bytes().as_ref()],
+        seeds = [_slot_number.to_le_bytes().as_ref()],
         bump,
         space = UserDeposit::LEN,
+        constraint = main_state.current_slot + 1 == _slot_number,
     )]
     pub user_deposit: Account<'info, UserDeposit>,
     #[account(
@@ -26,7 +28,7 @@ pub struct DepositInitialize<'info> {
     pub user_deposit_reference: Account<'info, UserDepositReference>,
     #[account(
         mut,
-        seeds = [MAIN_STATE_SEED],
+        seeds = [MAIN_STATE_SEED.as_bytes()],
         bump,
     )]
     pub main_state: Account<'info, MainState>,
@@ -38,7 +40,7 @@ pub struct DepositInitialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<DepositInitialize>) -> Result<()> {
+pub fn handler(ctx: Context<DepositInitialize>, _slot_number: u64) -> Result<()> {
     let user_deposit = &mut ctx.accounts.user_deposit;
     let user_deposit_reference = &mut ctx.accounts.user_deposit_reference;
     let main_state = &mut ctx.accounts.main_state;

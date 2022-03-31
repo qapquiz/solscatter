@@ -1,22 +1,23 @@
 use anchor_lang::prelude::*;
-use crate::state::{
+use crate::{state::{
     main_state::MainState,
     user_deposit::UserDeposit,
     drawing_result::{DrawingResult, DrawingState},
-};
+}, seed::{MAIN_STATE_SEED, DRAWING_RESULT_SEED}};
 
 #[derive(Accounts)]
+#[instruction(_processing_slot: u64)]
 pub struct Drawing<'info> {
     #[account(
         mut,
-        seeds = [b"main_state"],
+        seeds = [MAIN_STATE_SEED.as_bytes()],
         bump
     )]
     pub main_state: Account<'info, MainState>,
     #[account(
         mut,
         seeds = [
-            b"drawing_result",
+            DRAWING_RESULT_SEED.as_bytes(),
             main_state.current_round.to_le_bytes().as_ref(),
         ],
         bump,
@@ -24,14 +25,15 @@ pub struct Drawing<'info> {
     )]
     pub drawing_result: Account<'info, DrawingResult>,
     #[account(
-        seeds = [(drawing_result.last_processed_slot + 1).to_le_bytes().as_ref()],
+        seeds = [_processing_slot.to_le_bytes().as_ref()],
         bump,
+        constraint = drawing_result.last_processed_slot + 1 == _processing_slot
     )]
     pub user_deposit: Account<'info, UserDeposit>,
     pub clock: Sysvar<'info, Clock>,
 }
 
-pub fn handler(ctx: Context<Drawing>) -> Result<()> {
+pub fn handler(ctx: Context<Drawing>, _processing_slot: u64) -> Result<()> {
     let drawing_result = &mut ctx.accounts.drawing_result;
     let random_numbers = drawing_result.random_numbers.clone();
     let winners = drawing_result.winners.clone();

@@ -13,7 +13,7 @@ use quarry_mine::program::QuarryMine;
 pub struct Deposit<'info> {
     /// CHECK: platform authority
     #[account(
-        seeds = [PLATFORM_AUTHORITY_SEED],
+        seeds = [PLATFORM_AUTHORITY_SEED.as_bytes()],
         bump,
     )]
     pub platform_authority: AccountInfo<'info>,
@@ -28,7 +28,7 @@ pub struct Deposit<'info> {
     // ######## PROGRAM STATE ########
     #[account(
         mut,
-        seeds = [MAIN_STATE_SEED],
+        seeds = [MAIN_STATE_SEED.as_bytes()],
         bump,
     )]
     pub main_state: Box<Account<'info, MainState>>,

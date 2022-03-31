@@ -23,7 +23,9 @@ pub struct Initialize<'info> {
         init,
         payer = signer,
         space = MainState::LEN,
-        seeds = [MAIN_STATE_SEED],
+        seeds = [
+            MAIN_STATE_SEED.as_bytes(),
+        ],
         bump,
     )]
     pub main_state: Box<Account<'info, MainState>>,
@@ -31,13 +33,17 @@ pub struct Initialize<'info> {
         init,
         payer = signer,
         space = Metadata::LEN,
-        seeds = [METADATA_SEED],
+        seeds = [
+            METADATA_SEED.as_bytes()
+        ],
         bump,
     )]
     pub metadata: Box<Account<'info, Metadata>>,
     /// CHECK: platform_authority will stake token on behalf of user to collect all yield
     #[account(
-        seeds = [PLATFORM_AUTHORITY_SEED],
+        seeds = [
+            PLATFORM_AUTHORITY_SEED.as_bytes(),
+        ],
         bump
     )]
     pub platform_authority: AccountInfo<'info>,
@@ -80,7 +86,7 @@ pub struct Initialize<'info> {
     #[account(
         mut,
         seeds = [
-            MINER_SEED.as_ref(),
+            MINER_SEED.as_bytes(),
             quarry.key().to_bytes().as_ref(),
             platform_authority.key().to_bytes().as_ref(),
         ],
@@ -103,7 +109,7 @@ pub struct Initialize<'info> {
         init,
         payer = signer,
         seeds = [
-            STATE_SEED,
+            STATE_SEED.as_bytes(),
             vrf_account_info.key().as_ref(),
             signer.to_account_info().key().as_ref(),
         ],
@@ -160,7 +166,7 @@ impl<'info> Initialize<'info> {
     fn initialize_quarry(&self, platform_authority_bump: u8, miner_bump: u8) -> Result<()> {
         quarry_mine::cpi::create_miner(
             self.into_create_miner_cpi_context()
-                .with_signer(&[&[PLATFORM_AUTHORITY_SEED, &[platform_authority_bump]]]),
+                .with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
             miner_bump 
         )
     } 

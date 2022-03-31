@@ -28,8 +28,8 @@ pub mod solscatter {
         RequestRanmdomness::handler(&ctx, &params)
     }
 
-    pub fn deposit_initialize(ctx: Context<DepositInitialize>) -> Result<()> {
-        instructions::deposit_initialize::handler(ctx)
+    pub fn deposit_initialize(ctx: Context<DepositInitialize>, slot_number: u64) -> Result<()> {
+        instructions::deposit_initialize::handler(ctx, slot_number)
     }
 
     pub fn deposit(ctx: Context<Deposit>, params: DepositParams) -> Result<()> {
@@ -40,7 +40,7 @@ pub mod solscatter {
         instructions::start_drawing_phase::handler(ctx, number_of_rewards, random_numbers)
     }
 
-    pub fn drawing(ctx: Context<Drawing>) -> Result<()> {
-        instructions::drawing::handler(ctx)
+    pub fn drawing(ctx: Context<Drawing>, processing_slot: u64) -> Result<()> {
+        instructions::drawing::handler(ctx, processing_slot)
     }
 }
