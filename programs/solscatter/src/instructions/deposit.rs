@@ -42,8 +42,6 @@ pub struct Deposit<'info> {
         constraint = user_deposit.owner == depositor.to_account_info().key(),
     )]
     pub user_deposit: Box<Account<'info, UserDeposit>>,
-    // ######## END PROGRAM STATE ########
-
     // ######## YIELD GENERATOR ########
     #[account(
         mut,
@@ -78,8 +76,6 @@ pub struct Deposit<'info> {
         associated_token::authority = platform_authority,
     )]
     pub platform_yi_token_account: Box<Account<'info, TokenAccount>>,
-    // ######## END YIELD GENERATOR ########
-
     // ######## QUARRY ########
     /// CHECK: this is quarry program already checked with address =
     #[account(
@@ -106,12 +102,9 @@ pub struct Deposit<'info> {
         associated_token::authority = miner,
     )]
     pub miner_vault: Box<Account<'info, TokenAccount>>,
-    // ######### END QUARRY #########
-
     // ######## NATIVE PROGRAM ########
     pub clock: Sysvar<'info, Clock>,
     pub token_program: Program<'info, Token>,
-    // ######## END NATIVE PROGRAM ########
 }
 
 impl<'info> Deposit<'info> {

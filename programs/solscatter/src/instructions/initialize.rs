@@ -19,6 +19,9 @@ use switchboard_v2::VrfAccountData;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+    // ######## PROGRAM STATE ########
     #[account(
         init,
         payer = signer,
@@ -41,13 +44,10 @@ pub struct Initialize<'info> {
     pub metadata: Box<Account<'info, Metadata>>,
     /// CHECK: platform_authority will stake token on behalf of user to collect all yield
     #[account(
-        seeds = [
-            PLATFORM_AUTHORITY_SEED.as_bytes(),
-        ],
+        seeds = [PLATFORM_AUTHORITY_SEED.as_bytes()],
         bump
     )]
     pub platform_authority: AccountInfo<'info>,
-
     // ######### YIELD GENERATOR #########
     // DEVNET MINT = 5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA
     #[account(
@@ -74,8 +74,6 @@ pub struct Initialize<'info> {
         associated_token::authority = platform_authority,
     )]
     pub yi_underlying_token_account: Account<'info, TokenAccount>,
-    // ######### END YIELD GENERATOR #########
-
     // ######### QUARRY #########
     /// CHECK: this is quarry program already checked with address =
     #[account(
@@ -108,8 +106,6 @@ pub struct Initialize<'info> {
         associated_token::authority = miner,
     )]
     pub miner_vault: Box<Account<'info, TokenAccount>>,
-    // ######### END QUARRY #########
-
     // ######### SWITCHBOARD VRF #########
     #[account(
         init,
@@ -125,17 +121,11 @@ pub struct Initialize<'info> {
     pub vrf_client_state: AccountLoader<'info, VrfClientState>,
     /// CHECK: This is our VrfAccountData
     pub vrf_account_info: AccountInfo<'info>,
-    // ######### END SWITCHBOARD VRF #########
-
-    #[account(mut)]
-    pub signer: Signer<'info>,
-
     // ######## NATIVE PROGRAM ########
     pub rent: Sysvar<'info, Rent>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-    // ######## END NATIVE PROGRAM ########
 }
 
 impl<'info> Initialize<'info> {
