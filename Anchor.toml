@@ -1,18 +1,18 @@
 [features]
-seeds = true 
+seeds = true
 
 [programs.localnet]
-solscatter = "78WNnu3fBhSDtt8mFzy49GrPGhybffqdZjqc9eLo8rX9"
+solscatter = "FWjLfARtqXmqfFejHLwEZqCxQGiTwZ6H4mTWjbZjeTMX"
 
 [programs.devnet]
-solscatter = "78WNnu3fBhSDtt8mFzy49GrPGhybffqdZjqc9eLo8rX9"
+solscatter = "FWjLfARtqXmqfFejHLwEZqCxQGiTwZ6H4mTWjbZjeTMX"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "devnet"
-wallet = "/Users/armariya/.config/solana/id.json"
+wallet = "/Users/Ariya.l/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.spec.ts"

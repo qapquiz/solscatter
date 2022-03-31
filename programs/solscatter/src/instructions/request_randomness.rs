@@ -61,10 +61,6 @@ pub struct RequestRandomnessParams {
 }
 
 impl RequestRanmdomness<'_> {
-    pub fn validate(&self, _ctx: &Context<Self>, _params: &RequestRandomnessParams) -> Result<()> {
-        Ok(())
-    }
-
     pub fn handler(ctx: &Context<Self>, params: &RequestRandomnessParams) -> Result<()> {
         let switchboard_program = ctx.accounts.switchboard_program.to_account_info();
 

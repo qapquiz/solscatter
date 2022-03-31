@@ -1,4 +1,6 @@
 pub mod initialize;
+pub mod initialize_vrf;
+pub mod initialize_quarry;
 pub mod callback_request_randomness;
 pub mod request_randomness;
 pub mod deposit_initialize;
@@ -7,6 +9,8 @@ pub mod start_drawing_phase;
 pub mod drawing;
 
 pub use initialize::*;
+pub use initialize_vrf::*;
+pub use initialize_quarry::*;
 pub use callback_request_randomness::*;
 pub use request_randomness::*;
 pub use deposit_initialize::*;

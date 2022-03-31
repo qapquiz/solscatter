@@ -8,22 +8,29 @@ mod duration;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("78WNnu3fBhSDtt8mFzy49GrPGhybffqdZjqc9eLo8rX9");
+declare_id!("FWjLfARtqXmqfFejHLwEZqCxQGiTwZ6H4mTWjbZjeTMX");
 
 #[program]
 pub mod solscatter {
     use super::*;
 
-    #[access_control(ctx.accounts.validate(&ctx))]
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         instructions::initialize::handler(ctx)
+    }
+
+    #[access_control(ctx.accounts.validate(&ctx))]
+    pub fn initialize_vrf(ctx: Context<InitializeVrf>) -> Result<()> {
+        instructions::initialize_vrf::handler(ctx)
+    }
+
+    pub fn initialize_quarry(ctx: Context<InitializeQuarry>) -> Result<()> {
+        instructions::initialize_quarry::handler(ctx)
     }
 
     pub fn callback_request_randomness(ctx: Context<CallbackRequestRandomness>) -> Result<()> {
         instructions::callback_request_randomness::handler(ctx)
     }
 
-    #[access_control(ctx.accounts.validate(&ctx, &params))]
     pub fn request_randomness(ctx: Context<RequestRanmdomness>, params: RequestRandomnessParams) -> Result<()> {
         RequestRanmdomness::handler(&ctx, &params)
     }
