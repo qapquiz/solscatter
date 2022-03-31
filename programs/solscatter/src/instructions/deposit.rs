@@ -34,7 +34,7 @@ pub struct Deposit<'info> {
     pub main_state: Box<Account<'info, MainState>>,
     #[account(
         mut,
-        seeds = [METADATA_SEED],
+        seeds = [METADATA_SEED.as_bytes()],
         bump,
     )]
     pub metadata: Box<Account<'info, Metadata>>,
@@ -147,7 +147,7 @@ impl<'info> Deposit<'info> {
         // platform stake yi_underlying to solUST
         yi::cpi::stake(
             self.into_yi_stake_cpi_context()
-                .with_signer(&[&[PLATFORM_AUTHORITY_SEED, &[platform_authority_bump]]]),
+                .with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
             amount,
         )
     }
@@ -157,7 +157,7 @@ impl<'info> Deposit<'info> {
 
         quarry_mine::cpi::stake_tokens(
             self.into_quarry_stake_cpi_context()
-                .with_signer(&[&[PLATFORM_AUTHORITY_SEED, &[platform_authority_bump]]]),
+                .with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
             self.platform_yi_token_account.amount
         )
     }
