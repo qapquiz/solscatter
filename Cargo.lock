@@ -1183,6 +1183,7 @@ dependencies = [
  "bytemuck",
  "quarry-mine",
  "solana-program",
+ "spl-token",
  "switchboard-v2",
  "yi",
 ]

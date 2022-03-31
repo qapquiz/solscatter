@@ -4,10 +4,9 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use std::cmp::{max};
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, TokenAccount, Transfer};
 use yi::{cpi::accounts::Stake, YiToken};
 use quarry_mine::{cpi::accounts::UserStake, Miner, Quarry, Rewarder};
-use quarry_mine::program::QuarryMine;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -43,8 +42,6 @@ pub struct Deposit<'info> {
         constraint = user_deposit.owner == depositor.to_account_info().key(),
     )]
     pub user_deposit: Box<Account<'info, UserDeposit>>,
-    // ######## END PROGRAM STATE ########
-
     // ######## YIELD GENERATOR ########
     #[account(
         mut,
@@ -79,27 +76,35 @@ pub struct Deposit<'info> {
         associated_token::authority = platform_authority,
     )]
     pub platform_yi_token_account: Box<Account<'info, TokenAccount>>,
-    // ######## END YIELD GENERATOR ########
-
     // ######## QUARRY ########
-    pub quarry_program: Program<'info, QuarryMine>,
+    /// CHECK: this is quarry program already checked with address =
+    #[account(
+        address = quarry_mine::program::QuarryMine::id(),
+    )]
+    pub quarry_program: AccountInfo<'info>,
+    /// CHECK: this is miner check with seed
     #[account(
         address = metadata.quarry_miner
     )]
-    pub platform_quarry_miner: Account<'info, Miner>,
-    #[account(mut)]
+    pub miner: Account<'info, Miner>,
+    #[account(
+        mut,
+        address = metadata.quarry
+    )]
     pub quarry: Box<Account<'info, Quarry>>,
+    #[account(
+        address = metadata.quarry_rewarder
+    )]
     pub rewarder: Box<Account<'info, Rewarder>>,
     #[account(
         mut,
         associated_token::mint = yi_mint,
-        associated_token::authority = platform_quarry_miner,
+        associated_token::authority = miner,
     )]
     pub miner_vault: Box<Account<'info, TokenAccount>>,
     // ######## NATIVE PROGRAM ########
     pub clock: Sysvar<'info, Clock>,
     pub token_program: Program<'info, Token>,
-    // ######## END NATIVE PROGRAM ########
 }
 
 impl<'info> Deposit<'info> {
@@ -123,7 +128,7 @@ impl<'info> Deposit<'info> {
             self.quarry_program.to_account_info(),
             UserStake {
                 authority: self.platform_authority.to_account_info(),
-                miner: self.platform_quarry_miner.to_account_info(),
+                miner: self.miner.to_account_info(),
                 quarry: self.quarry.to_account_info(),
                 miner_vault: self.miner_vault.to_account_info(),
                 token_account: self.platform_yi_token_account.to_account_info(),
@@ -140,7 +145,8 @@ impl<'info> Deposit<'info> {
             authority: self.depositor.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_account);
-        token::transfer(cpi_ctx, amount)
+
+        anchor_spl::token::transfer(cpi_ctx, amount)
     }
 
     fn stake_to_yield_generator(&self, amount: u64, platform_authority_bump: u8) -> Result<()> {
@@ -199,20 +205,23 @@ impl<'info> Deposit<'info> {
     }
 
     pub fn deposit(&mut self, params: DepositParams, platform_authority_bump: u8) -> Result<()> {
-        self.transfer_yi_underlying_to_platform(params.amount)?;
-        self.stake_to_yield_generator(params.amount, platform_authority_bump)?;
+        let deposit_amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
+
+        self.transfer_yi_underlying_to_platform(deposit_amount)?;
+        self.stake_to_yield_generator(deposit_amount, platform_authority_bump)?;
         self.stake_to_quarry(platform_authority_bump)?;
-        self.update_state(params.amount)
+        self.update_state(deposit_amount)
     }
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct DepositParams {
-    pub amount: u64,
+    pub ui_amount: f64,
+    pub decimals: u8
 }
 
 pub fn handler(ctx: Context<Deposit>, params: DepositParams) -> Result<()> {
-    if params.amount <= 0 {
+    if params.ui_amount <= 0_f64 {
         return Ok(());
     }
 
