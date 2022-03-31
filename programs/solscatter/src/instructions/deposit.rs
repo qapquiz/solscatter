@@ -202,8 +202,7 @@ impl<'info> Deposit<'info> {
         self.transfer_yi_underlying_to_platform(params.amount)?;
         self.stake_to_yield_generator(params.amount, platform_authority_bump)?;
         self.stake_to_quarry(platform_authority_bump)?;
-        self.update_state(params.amount)?;
-        Ok(())
+        self.update_state(params.amount)
     }
 }
 
