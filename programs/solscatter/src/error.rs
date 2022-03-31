@@ -10,4 +10,6 @@ pub enum SolscatterError {
     NumberOfRandomNumbersNotMatchWithNumberOfRewards,
     #[msg("wrong switchboard vrf account")]
     InvalidSwitchboardVrfAccount,
+    #[msg("insufficient balance")]
+    InsufficientBalance,
 }

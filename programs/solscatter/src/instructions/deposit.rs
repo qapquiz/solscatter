@@ -4,7 +4,7 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use std::cmp::{max};
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, TokenAccount, Transfer};
 use yi::{cpi::accounts::Stake, YiToken};
 use quarry_mine::{cpi::accounts::UserStake, Miner, Quarry, Rewarder};
 
@@ -145,7 +145,8 @@ impl<'info> Deposit<'info> {
             authority: self.depositor.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_account);
-        token::transfer(cpi_ctx, amount)
+
+        anchor_spl::token::transfer(cpi_ctx, amount)
     }
 
     fn stake_to_yield_generator(&self, amount: u64, platform_authority_bump: u8) -> Result<()> {

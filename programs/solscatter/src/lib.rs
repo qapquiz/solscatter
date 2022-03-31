@@ -36,6 +36,10 @@ pub mod solscatter {
         instructions::deposit::handler(ctx, params)
     }
 
+    pub fn withdraw(ctx: Context<Withdraw>, params: WithdrawParams) -> Result<()> {
+        instructions::withdraw::handler(ctx, params)
+    }
+
     pub fn start_drawing_phase(ctx: Context<StartDrawingPhase>, number_of_rewards: u8, random_numbers: Vec<u64>) -> Result<()> {
         instructions::start_drawing_phase::handler(ctx, number_of_rewards, random_numbers)
     }
