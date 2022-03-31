@@ -11,12 +11,6 @@ use quarry_mine::program::QuarryMine;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    /// CHECK: platform authority
-    #[account(
-        seeds = [PLATFORM_AUTHORITY_SEED.as_bytes()],
-        bump,
-    )]
-    pub platform_authority: AccountInfo<'info>,
     #[account(mut)]
     pub depositor: Signer<'info>,
     #[account(
@@ -38,6 +32,12 @@ pub struct Deposit<'info> {
         bump,
     )]
     pub metadata: Box<Account<'info, Metadata>>,
+    /// CHECK: platform authority
+    #[account(
+        seeds = [PLATFORM_AUTHORITY_SEED.as_bytes()],
+        bump,
+    )]
+    pub platform_authority: AccountInfo<'info>,
     #[account(
         mut,
         constraint = user_deposit.owner == depositor.to_account_info().key(),
