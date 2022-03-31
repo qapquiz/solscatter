@@ -21,8 +21,9 @@ impl Metadata {
 		32 + // yi_underlying_token_account
 		32 + // yi_mint_token_account
 		32 + // platform_authority
+		32 + // quarry
 		32 + // quarry_miner
-		32 + // quarry_miner_vault
-		32 // quarry
+		32 + // quarry_miner_vault 
+		32 // quarry_rewarder
 		;
 }

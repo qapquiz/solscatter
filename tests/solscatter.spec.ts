@@ -67,6 +67,8 @@ describe("solscatter specs", () => {
         yiUnderlyingTokenAccount,
         quarryProgram,
         quarry,
+        rewarder,
+        minerVault,
         vrfAccountInfo: vrfKeypair.publicKey,
         signer: program.provider.wallet.publicKey,
       })

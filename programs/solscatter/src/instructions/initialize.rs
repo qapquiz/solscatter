@@ -16,6 +16,8 @@ use solana_program::pubkey;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
     #[account(
         init,
         payer = signer,
@@ -56,7 +58,6 @@ pub struct Initialize<'info> {
         address = pubkey!("6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7"),
     )]
     pub yi_mint: AccountInfo<'info>,
-
     #[account(
         init,
         payer = signer,
@@ -90,8 +91,17 @@ pub struct Initialize<'info> {
         seeds::program = quarry_program.key(),
     )]
     pub miner: AccountInfo<'info>,
-    #[account(mut)]
     pub quarry: Box<Account<'info, Quarry>>,
+    /// CHECK: alreday checked with quarry.rewarder_key
+    #[account(
+        address = quarry.rewarder_key,
+    )]
+    pub rewarder: AccountInfo<'info>,
+    #[account(
+        associated_token::mint = yi_mint,
+        associated_token::authority = miner,
+    )]
+    pub miner_vault: Box<Account<'info, TokenAccount>>,
     // ######### END QUARRY #########
 
     // ######### SWITCHBOARD VRF #########
@@ -99,8 +109,6 @@ pub struct Initialize<'info> {
     pub vrf_account_info: AccountInfo<'info>,
     // ######### END SWITCHBOARD VRF #########
 
-    #[account(mut)]
-    pub signer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
@@ -127,7 +135,10 @@ impl<'info> Initialize<'info> {
         metadata.yi_mint = self.yi_mint.key();
         metadata.yi_mint_token_account = self.yi_mint_token_account.to_account_info().key();
         metadata.platform_authority = self.platform_authority.key();
+        metadata.quarry = self.quarry.to_account_info().key();
         metadata.quarry_miner = self.miner.key();
+        metadata.quarry_miner_vault = self.miner_vault.to_account_info().key();
+        metadata.quarry_rewarder = self.rewarder.key();
         Ok(())
     }
 

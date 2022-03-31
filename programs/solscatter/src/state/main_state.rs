@@ -12,5 +12,5 @@ pub struct MainState {
 }
 
 impl MainState {
-    pub const LEN: usize = 8 + 8 + 8 + 8 + 32 + 9 + 8 + 8;
+    pub const LEN: usize = 8 + 8 + 8 + 8 + 32 + 8 + 8 + 8;
 }
