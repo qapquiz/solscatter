@@ -12,4 +12,6 @@ pub enum SolscatterError {
     InvalidSwitchboardVrfAccount,
     #[msg("insufficient balance")]
     InsufficientBalance,
+    #[msg("never deposited")]
+    NeverDeposited,
 }

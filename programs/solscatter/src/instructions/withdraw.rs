@@ -57,7 +57,7 @@ pub struct Withdraw<'info> {
 	#[account(
 		address = yi::program::Yi::id()
 	)]
-	pub yi_token_program: AccountInfo<'info>,
+	pub yi_program: AccountInfo<'info>,
 	pub yi_token: AccountLoader<'info, YiToken>,
 	#[account(
 		mut,
@@ -110,6 +110,20 @@ pub struct Withdraw<'info> {
 
 impl<'info> Withdraw<'info> {
 
+	fn validate(&self, amount: u64) -> Result<()> {
+		let user_deposit = &self.user_deposit;
+
+		if amount > user_deposit.amount {
+			return Err(error!(SolscatterError::InsufficientBalance))
+		}
+
+		if user_deposit.latest_deposit_timestamp == None {
+			return Err(error!(SolscatterError::NeverDeposited))
+		}
+
+		Ok(())
+	}
+
 	fn into_quarry_stake_cpi_context(&self) -> CpiContext<'_, '_, '_, 'info, UserStake<'info>> {
 		CpiContext::new(
 			self.quarry_program.to_account_info(),
@@ -127,7 +141,7 @@ impl<'info> Withdraw<'info> {
 
 	fn into_yi_un_stake_cpi_context(&self) -> CpiContext<'_, '_, '_, 'info, Unstake<'info>> {
 		CpiContext::new(
-			self.yi_token_program.to_account_info(),
+			self.yi_program.to_account_info(),
 			Unstake {
 				yi_token: self.yi_token.to_account_info(),
 				yi_mint: self.yi_mint.to_account_info(),
@@ -140,7 +154,7 @@ impl<'info> Withdraw<'info> {
 		)
 	}
 
-	pub fn update_state(&mut self, amount: u64) -> Result<()> {
+	fn update_state(&mut self, amount: u64) -> Result<()> {
 		let user_deposit = &mut self.user_deposit;
 		user_deposit.amount = user_deposit.amount - amount;
 
@@ -150,7 +164,7 @@ impl<'info> Withdraw<'info> {
 		Ok(())
 	}
 
-	pub fn withdraw_from_quarry(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
+	fn withdraw_from_quarry(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
 		quarry_mine::cpi::withdraw_tokens(
 			self.into_quarry_stake_cpi_context()
 				.with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
@@ -158,7 +172,7 @@ impl<'info> Withdraw<'info> {
 		)
 	}
 
-	pub fn un_stake_from_yield_generator(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
+	fn un_stake_from_yield_generator(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
 		yi::cpi::unstake(
 			self.into_yi_un_stake_cpi_context()
 				.with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
@@ -185,23 +199,19 @@ impl<'info> Withdraw<'info> {
 		)
 	}
 
-	pub fn withdraw(&mut self, params: WithdrawParams, platform_authority_bump: u8) -> Result<()> {
+	fn withdraw(&mut self, params: WithdrawParams, platform_authority_bump: u8) -> Result<()> {
 		let amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
-		let user_deposit = &self.user_deposit;
 
-		if amount > user_deposit.amount {
-			return Err(error!(SolscatterError::InsufficientBalance))
-		}
-
+		self.validate(amount)?;
 		self.withdraw_from_quarry(amount, platform_authority_bump)?;
 		self.un_stake_from_yield_generator(amount, platform_authority_bump)?;
+		self.user_deposit.refresh_penalty_fee(self.clock.unix_timestamp, self.main_state.penalty_period)?;
 
 		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100_f64;
 		let fee_amount = spl_token::ui_amount_to_amount(params.ui_amount * fee, params.decimals);
 		let withdraw_amount = amount - fee_amount;
 
 		self.transfer_yi_underlying_to_depositor(withdraw_amount, platform_authority_bump)?;
-
 		self.update_state(amount)
 	}
 }
