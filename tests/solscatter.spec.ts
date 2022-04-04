@@ -5,6 +5,7 @@ import {createVrfAccount} from "./vrf";
 import {getMint} from "@solana/spl-token";
 import {clusterApiUrl} from "@solana/web3.js";
 import {DEVNET_CLUSTER} from "./constant";
+import {web3} from "@project-serum/anchor";
 
 describe("solscatter specs", () => {
     anchor.setProvider(anchor.Provider.env());
@@ -162,7 +163,7 @@ describe("solscatter specs", () => {
                 quarry: metadata.quarry,
                 rewarder: metadata.quarryRewarder,
                 minerVault: metadata.quarryMinerVault,
-                clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
+                clock: web3.SYSVAR_CLOCK_PUBKEY
             })
             .rpc()
 
