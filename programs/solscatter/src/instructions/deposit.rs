@@ -48,7 +48,7 @@ pub struct Deposit<'info> {
     )]
     pub yi_mint: Box<Account<'info, Mint>>,
     #[account(
-        address = metadata.yi_underlying_token_account,
+        address = metadata.yi_underlying_mint,
     )]
     pub yi_underlying_mint: Box<Account<'info, Mint>>,
     /// CHECK: Yi token program
@@ -83,6 +83,7 @@ pub struct Deposit<'info> {
     pub quarry_program: AccountInfo<'info>,
     /// CHECK: this is miner check with seed
     #[account(
+        mut,
         address = metadata.quarry_miner
     )]
     pub miner: Account<'info, Miner>,

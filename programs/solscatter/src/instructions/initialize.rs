@@ -13,6 +13,7 @@ use anchor_spl::{token::TokenAccount, associated_token::AssociatedToken};
 use anchor_spl::token::Token;
 use quarry_mine::Quarry;
 use solana_program::pubkey;
+use yi::YiToken;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -48,6 +49,12 @@ pub struct Initialize<'info> {
     pub platform_authority: AccountInfo<'info>,
 
     // ######### YIELD GENERATOR #########
+    /// CHECK: Yi token program
+    #[account(
+        address = yi::program::Yi::id()
+    )]
+    pub yi_program: AccountInfo<'info>,
+    pub yi_token: AccountLoader<'info, YiToken>,
     /// CHECK: solust
     #[account(
         address = pubkey!("5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA"),
@@ -130,11 +137,20 @@ impl<'info> Initialize<'info> {
 
     fn initialize_metadata(&mut self) -> Result<()> {
         let metadata = &mut self.metadata;
+        let yi = self.yi_token.load()?;
+
+        msg!("yi_token mint {}", yi.mint);
+        msg!("yi_token underlying_token_mint {}", yi.underlying_token_mint);
+        msg!("yi_token underlying_tokens {}", yi.underlying_tokens);
+
+        metadata.yi_program = self.yi_program.key();
+        metadata.yi_token = self.yi_token.to_account_info().key();
         metadata.yi_underlying_mint = self.yi_underlying_mint.key();
         metadata.yi_underlying_token_account = self.yi_underlying_token_account.to_account_info().key();
         metadata.yi_mint = self.yi_mint.key();
         metadata.yi_mint_token_account = self.yi_mint_token_account.to_account_info().key();
         metadata.platform_authority = self.platform_authority.key();
+        metadata.quarry_program = self.quarry_program.key();
         metadata.quarry = self.quarry.to_account_info().key();
         metadata.quarry_miner = self.miner.key();
         metadata.quarry_miner_vault = self.miner_vault.to_account_info().key();
