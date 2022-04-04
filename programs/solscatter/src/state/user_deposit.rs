@@ -34,7 +34,6 @@ impl UserDeposit {
 		let new_penalty_fee = ((self.amount as f64 * self.penalty_fee) + (amount as f64 * platform_penalty_fee)) / (self.amount + amount) as f64;
 
 		self.penalty_fee = new_penalty_fee;
-		self.latest_deposit_timestamp = Some(current_timestamp);
 
 		msg!("new_penalty_fee : {} ", new_penalty_fee);
 

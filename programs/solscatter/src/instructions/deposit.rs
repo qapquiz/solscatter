@@ -169,14 +169,15 @@ impl<'info> Deposit<'info> {
     }
 
     fn update_state(&mut self, amount: u64) -> Result<()> {
-        self.user_deposit.update_penalty_fee(amount, self.clock.unix_timestamp, self.main_state.penalty_period, self.main_state.penalty_fee)?;
+        let current_timestamp= self.clock.unix_timestamp;
+        self.user_deposit.update_penalty_fee(amount, current_timestamp, self.main_state.penalty_period, self.main_state.penalty_fee)?;
 
         let user_deposit = &mut self.user_deposit;
         user_deposit.amount = user_deposit.amount.checked_add(amount).unwrap();
+        user_deposit.latest_deposit_timestamp = Some(current_timestamp);
 
         let main_state = &mut self.main_state;
         main_state.total_deposit = main_state.total_deposit.checked_add(amount).unwrap();
-
         Ok(())
     }
 
