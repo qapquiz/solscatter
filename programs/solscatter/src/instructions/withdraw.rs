@@ -109,16 +109,13 @@ pub struct Withdraw<'info> {
 }
 
 impl<'info> Withdraw<'info> {
-
-	fn validate(&self, amount: u64) -> Result<()> {
+	pub fn validate(&self, amount: u64) -> Result<()> {
 		let user_deposit = &self.user_deposit;
 
-		if amount > user_deposit.amount {
-			return Err(error!(SolscatterError::InsufficientBalance))
-		}
+		require_gt!(amount, user_deposit.amount, SolscatterError::InsufficientBalance);
 
-		if user_deposit.latest_deposit_timestamp == None {
-			return Err(error!(SolscatterError::NeverDeposited))
+		if user_deposit.latest_deposit_timestamp.is_none() {
+			return Err(error!(SolscatterError::NeverDeposited));
 		}
 
 		Ok(())
@@ -139,7 +136,7 @@ impl<'info> Withdraw<'info> {
 		)
 	}
 
-	fn into_yi_un_stake_cpi_context(&self) -> CpiContext<'_, '_, '_, 'info, Unstake<'info>> {
+	fn into_yi_unstake_cpi_context(&self) -> CpiContext<'_, '_, '_, 'info, Unstake<'info>> {
 		CpiContext::new(
 			self.yi_program.to_account_info(),
 			Unstake {
@@ -181,9 +178,9 @@ impl<'info> Withdraw<'info> {
 		)
 	}
 
-	fn un_stake_from_yield_generator(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
+	fn unstake_from_yield_generator(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
 		yi::cpi::unstake(
-			self.into_yi_un_stake_cpi_context()
+			self.into_yi_unstake_cpi_context()
 				.with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
 			amount,
 		)
@@ -213,7 +210,7 @@ impl<'info> Withdraw<'info> {
 
 		self.validate(amount)?;
 		self.withdraw_from_quarry(amount, platform_authority_bump)?;
-		self.un_stake_from_yield_generator(amount, platform_authority_bump)?;
+		self.unstake_from_yield_generator(amount, platform_authority_bump)?;
 		self.user_deposit.refresh_penalty_fee(self.clock.unix_timestamp, self.main_state.penalty_period)?;
 
 		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100_f64;

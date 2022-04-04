@@ -15,7 +15,7 @@ pub struct DepositInitialize<'info> {
         seeds = [_slot_number.to_le_bytes().as_ref()],
         bump,
         space = UserDeposit::LEN,
-        constraint = main_state.current_slot + 1 == _slot_number,
+        constraint = main_state.current_slot.checked_add(1).unwrap() == _slot_number,
     )]
     pub user_deposit: Account<'info, UserDeposit>,
     #[account(
@@ -45,13 +45,14 @@ pub fn handler(ctx: Context<DepositInitialize>, _slot_number: u64) -> Result<()>
     let user_deposit_reference = &mut ctx.accounts.user_deposit_reference;
     let main_state = &mut ctx.accounts.main_state;
     let depositor = &ctx.accounts.depositor;
+    let slot = main_state.current_slot.checked_add(1).unwrap();
 
-    user_deposit.slot = main_state.current_slot + 1;
+    user_deposit.slot = slot;
     user_deposit.amount = 0;
     user_deposit.owner = depositor.key().clone();
     user_deposit.latest_deposit_timestamp = None;
-    user_deposit_reference.slot = main_state.current_slot + 1;
+    user_deposit_reference.slot = slot;
 
-    main_state.current_slot = main_state.current_slot + 1;
+    main_state.current_slot = slot;
     Ok(())
 }
