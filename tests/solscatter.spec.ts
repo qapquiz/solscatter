@@ -1,5 +1,4 @@
 import * as anchor from "@project-serum/anchor";
-import {BN, Program, web3} from "@project-serum/anchor";
 import {Solscatter} from "../target/types/solscatter";
 import {isAccountAlreadyInitialize, loadKeypair} from "./utils";
 import {createVrfAccount} from "./vrf";
@@ -10,7 +9,7 @@ import {DEVNET_CLUSTER} from "./constant";
 describe("solscatter specs", () => {
     anchor.setProvider(anchor.Provider.env());
 
-    const program = anchor.workspace.Solscatter as Program<Solscatter>;
+    const program = anchor.workspace.Solscatter as anchor.Program<Solscatter>;
     const connection = new anchor.web3.Connection(clusterApiUrl(DEVNET_CLUSTER), "processed");
     const yiUnderlyingMint = new anchor.web3.PublicKey("5fjG31cbSszE6FodW37UJnNzgVTyqg5WHWGCmL3ayAvA");
     const yiMint = new anchor.web3.PublicKey("6XyygxFmUeemaTvA9E9mhH9FvgpynZqARVyG3gUdCMt7");
@@ -36,6 +35,16 @@ describe("solscatter specs", () => {
     });
 
     it("should initialize program and yi and quarry", async () => {
+        const [metadata] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from("metadata")], program.programId);
+        const isProgramInitialize = await isAccountAlreadyInitialize(
+            program.provider.connection,
+            metadata,
+        );
+
+        if (isProgramInitialize) {
+            return;
+        }
+
         const [platformAuthorityPda] = await anchor.web3.PublicKey.findProgramAddress(
             [
                 Buffer.from("PLATFORM_AUTHORITY"),
@@ -102,7 +111,7 @@ describe("solscatter specs", () => {
     it("should create deposit initialize", async () => {
         const [mainStatePDA] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from("main_state")], program.programId)
         const mainState = await program.account.mainState.fetch(mainStatePDA)
-        const newSlot = mainState.currentSlot.add(new BN(1));
+        const newSlot = mainState.currentSlot.add(new anchor.BN(1));
 
         const depositInitializeTx = await program
             .methods
@@ -153,7 +162,7 @@ describe("solscatter specs", () => {
                 quarry: metadata.quarry,
                 rewarder: metadata.quarryRewarder,
                 minerVault: metadata.quarryMinerVault,
-                clock: web3.SYSVAR_CLOCK_PUBKEY
+                clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
             })
             .rpc()
 
