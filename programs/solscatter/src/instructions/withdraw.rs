@@ -165,10 +165,19 @@ impl<'info> Withdraw<'info> {
 	}
 
 	fn withdraw_from_quarry(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
+		let yi_token = self.yi_token.load()?;
+
+		let yi_amount = yi_token.calculate_yitokens_for_underlying(
+			amount,
+			self.yi_underlying_token_account.amount,
+			self.yi_mint.supply
+
+		).unwrap();
+
 		quarry_mine::cpi::withdraw_tokens(
 			self.into_quarry_stake_cpi_context()
 				.with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
-			amount
+			yi_amount
 		)
 	}
 
