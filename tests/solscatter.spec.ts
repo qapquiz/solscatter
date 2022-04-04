@@ -5,6 +5,7 @@ import {createVrfAccount} from "./vrf";
 import {getMint} from "@solana/spl-token";
 import {clusterApiUrl} from "@solana/web3.js";
 import {DEVNET_CLUSTER} from "./constant";
+import {web3} from "@project-serum/anchor";
 
 describe("solscatter specs", () => {
     anchor.setProvider(anchor.Provider.env());
@@ -140,7 +141,7 @@ describe("solscatter specs", () => {
             owner: metadata.yiToken,
         });
 
-        const depositInitializeTx = await program
+        const deposit = await program
             .methods
             .deposit({
                 uiAmount: 1,
@@ -156,16 +157,61 @@ describe("solscatter specs", () => {
                 yiMint: metadata.yiMint,
                 yiUnderlyingTokenAccount: yiUnderlyingTokenAccount,
                 platformYiUnderlyingTokenAccount: metadata.yiUnderlyingTokenAccount,
-                platformYiMintTokenAccount: metadata.yiMintTokenAccount,
+                platformYiTokenAccount: metadata.yiMintTokenAccount,
                 quarryProgram: metadata.quarryProgram,
                 miner: metadata.quarryMiner,
                 quarry: metadata.quarry,
                 rewarder: metadata.quarryRewarder,
                 minerVault: metadata.quarryMinerVault,
-                clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
+                clock: web3.SYSVAR_CLOCK_PUBKEY
             })
             .rpc()
 
-        console.log("depositInitialize tx:", depositInitializeTx)
+        console.log("deposit tx: ", deposit)
+    });
+
+    it("withdraw", async () => {
+        const [metadataPDA] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from("metadata")], program.programId)
+        const metadata = await program.account.metadata.fetch(metadataPDA)
+        const underlyingMintInfo = await getMint(connection, metadata.yiUnderlyingMint);
+        const depositorUnderlyingTokenAccount = await anchor.utils.token.associatedAddress({
+            mint: underlyingMintInfo.address,
+            owner: program.provider.wallet.publicKey,
+        });
+        const [userDepositReferencePubKey] = await anchor.web3.PublicKey.findProgramAddress([program.provider.wallet.publicKey.toBuffer()], program.programId)
+        const userDepositReference = await program.account.userDepositReference.fetch(userDepositReferencePubKey)
+        const [userDepositPDA] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(userDepositReference.slot.toArray("le", 8))], program.programId)
+        const yiUnderlyingTokenAccount = await anchor.utils.token.associatedAddress({
+            mint: underlyingMintInfo.address,
+            owner: metadata.yiToken,
+        });
+
+        const withdrawTx = await program
+            .methods
+            .withdraw({
+                uiAmount: 1,
+                decimals: underlyingMintInfo.decimals
+            })
+            .accounts({
+                depositor: program.provider.wallet.publicKey,
+                depositorYiUnderlyingTokenAccount: depositorUnderlyingTokenAccount,
+                userDeposit: userDepositPDA,
+                yiProgram: metadata.yiProgram,
+                yiToken: metadata.yiToken,
+                yiUnderlyingMint: metadata.yiUnderlyingMint,
+                yiMint: metadata.yiMint,
+                yiUnderlyingTokenAccount: yiUnderlyingTokenAccount,
+                platformYiUnderlyingTokenAccount: metadata.yiUnderlyingTokenAccount,
+                platformYiTokenAccount: metadata.yiMintTokenAccount,
+                quarryProgram: metadata.quarryProgram,
+                miner: metadata.quarryMiner,
+                quarry: metadata.quarry,
+                rewarder: metadata.quarryRewarder,
+                minerVault: metadata.quarryMinerVault,
+                clock: web3.SYSVAR_CLOCK_PUBKEY
+            })
+            .rpc()
+
+        console.log("withdraw tx: ", withdrawTx)
     });
 });
