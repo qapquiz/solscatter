@@ -50,7 +50,7 @@ pub struct Withdraw<'info> {
 	)]
 	pub yi_mint: Box<Account<'info, Mint>>,
 	#[account(
-		address = metadata.yi_underlying_token_account,
+		address = metadata.yi_underlying_mint,
 	)]
 	pub yi_underlying_mint: Box<Account<'info, Mint>>,
 	/// CHECK: Yi token program (solUST authority)
@@ -85,6 +85,7 @@ pub struct Withdraw<'info> {
 	pub quarry_program: AccountInfo<'info>,
 	/// CHECK: this is miner check with seed
 	#[account(
+		mut,
 		address = metadata.quarry_miner
 	)]
 	pub miner: Account<'info, Miner>,
@@ -156,24 +157,15 @@ impl<'info> Withdraw<'info> {
 
 	fn update_state(&mut self, amount: u64) -> Result<()> {
 		let user_deposit = &mut self.user_deposit;
-		user_deposit.amount = user_deposit.amount - amount;
+		user_deposit.amount = user_deposit.amount.checked_sub(amount).unwrap();
 
 		let main_state = &mut self.main_state;
-		main_state.total_deposit = main_state.total_deposit - amount;
+		main_state.total_deposit = main_state.total_deposit.checked_sub(amount).unwrap();
 
 		Ok(())
 	}
 
-	fn withdraw_from_quarry(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
-		let yi_token = self.yi_token.load()?;
-
-		let yi_amount = yi_token.calculate_yitokens_for_underlying(
-			amount,
-			self.yi_underlying_token_account.amount,
-			self.yi_mint.supply
-
-		).unwrap();
-
+	fn withdraw_from_quarry(&mut self, yi_amount: u64, platform_authority_bump: u8) -> Result<()> {
 		quarry_mine::cpi::withdraw_tokens(
 			self.into_quarry_stake_cpi_context()
 				.with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
@@ -181,11 +173,11 @@ impl<'info> Withdraw<'info> {
 		)
 	}
 
-	fn un_stake_from_yield_generator(&mut self, amount: u64, platform_authority_bump: u8) -> Result<()> {
+	fn un_stake_from_yield_generator(&mut self, yi_amount: u64, platform_authority_bump: u8) -> Result<()> {
 		yi::cpi::unstake(
 			self.into_yi_un_stake_cpi_context()
 				.with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
-			amount,
+			yi_amount,
 		)
 	}
 
@@ -193,13 +185,10 @@ impl<'info> Withdraw<'info> {
 		let cpi_account = Transfer {
 			from: self.platform_yi_underlying_token_account.to_account_info(),
 			to: self.depositor_yi_underlying_token_account.to_account_info(),
-			authority: self.depositor.to_account_info(),
+			authority: self.platform_authority.to_account_info(),
 		};
 
-		let cpi_ctx = CpiContext::new(
-			self.token_program.to_account_info(),
-			cpi_account
-		);
+		let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_account);
 
 		anchor_spl::token::transfer(
 			cpi_ctx
@@ -210,13 +199,19 @@ impl<'info> Withdraw<'info> {
 
 	fn withdraw(&mut self, params: WithdrawParams, platform_authority_bump: u8) -> Result<()> {
 		let amount = spl_token::ui_amount_to_amount(params.ui_amount, params.decimals);
+		let yi_amount = self.yi_token.load()?.calculate_yitokens_for_underlying(
+			amount,
+			self.yi_underlying_token_account.amount,
+			self.yi_mint.supply
+
+		).unwrap();
 
 		self.validate(amount)?;
-		self.withdraw_from_quarry(amount, platform_authority_bump)?;
-		self.un_stake_from_yield_generator(amount, platform_authority_bump)?;
+		self.withdraw_from_quarry(yi_amount, platform_authority_bump)?;
+		self.un_stake_from_yield_generator(yi_amount, platform_authority_bump)?;
 		self.user_deposit.refresh_penalty_fee(self.clock.unix_timestamp, self.main_state.penalty_period)?;
 
-		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100_f64;
+		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100.;
 		let fee_amount = spl_token::ui_amount_to_amount(params.ui_amount * fee, params.decimals);
 		let withdraw_amount = amount - fee_amount;
 

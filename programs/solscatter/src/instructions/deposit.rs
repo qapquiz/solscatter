@@ -74,7 +74,7 @@ pub struct Deposit<'info> {
         associated_token::mint = yi_mint,
         associated_token::authority = platform_authority,
     )]
-    pub platform_yi_mint_token_account: Box<Account<'info, TokenAccount>>,
+    pub platform_yi_token_account: Box<Account<'info, TokenAccount>>,
     // ######## QUARRY ########
     /// CHECK: this is quarry program already checked with address =
     #[account(
@@ -117,7 +117,7 @@ impl<'info> Deposit<'info> {
                 source_tokens: self.platform_yi_underlying_token_account.to_account_info(),
                 source_authority: self.platform_authority.to_account_info(),
                 yi_underlying_tokens: self.yi_underlying_token_account.to_account_info(),
-                destination_yi_tokens: self.platform_yi_mint_token_account.to_account_info(),
+                destination_yi_tokens: self.platform_yi_token_account.to_account_info(),
                 token_program: self.token_program.to_account_info(),
             },
         )
@@ -131,7 +131,7 @@ impl<'info> Deposit<'info> {
                 miner: self.miner.to_account_info(),
                 quarry: self.quarry.to_account_info(),
                 miner_vault: self.miner_vault.to_account_info(),
-                token_account: self.platform_yi_mint_token_account.to_account_info(),
+                token_account: self.platform_yi_token_account.to_account_info(),
                 token_program: self.token_program.to_account_info(),
                 rewarder: self.rewarder.to_account_info()
             }
@@ -159,23 +159,25 @@ impl<'info> Deposit<'info> {
     }
 
     fn stake_to_quarry(&mut self, platform_authority_bump: u8) -> Result<()> {
-        self.platform_yi_mint_token_account.reload()?;
+        self.platform_yi_token_account.reload()?;
 
         quarry_mine::cpi::stake_tokens(
             self.into_quarry_stake_cpi_context()
                 .with_signer(&[&[PLATFORM_AUTHORITY_SEED.as_bytes(), &[platform_authority_bump]]]),
-            self.platform_yi_mint_token_account.amount
+            self.platform_yi_token_account.amount
         )
     }
 
     fn update_state(&mut self, amount: u64) -> Result<()> {
+        self.user_deposit.update_penalty_fee(amount, self.clock.unix_timestamp, self.main_state.penalty_period, self.main_state.penalty_fee)?;
+
         let user_deposit = &mut self.user_deposit;
-        user_deposit.amount = user_deposit.amount + amount;
+        user_deposit.amount = user_deposit.amount.checked_add(amount).unwrap();
 
         let main_state = &mut self.main_state;
-        main_state.total_deposit = main_state.total_deposit + amount;
+        main_state.total_deposit = main_state.total_deposit.checked_add(amount).unwrap();
 
-        self.user_deposit.update_penalty_fee(amount, self.clock.unix_timestamp, self.main_state.penalty_period, self.main_state.penalty_fee)
+        Ok(())
     }
 
     pub fn deposit(&mut self, params: DepositParams, platform_authority_bump: u8) -> Result<()> {
@@ -195,7 +197,7 @@ pub struct DepositParams {
 }
 
 pub fn handler(ctx: Context<Deposit>, params: DepositParams) -> Result<()> {
-    if params.ui_amount <= 0_f64 {
+    if params.ui_amount <= 0. {
         return Ok(());
     }
 

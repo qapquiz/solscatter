@@ -23,6 +23,8 @@ impl UserDeposit {
 
 		self.penalty_fee = refreshed_penalty_fee;
 
+		msg!("refreshed_penalty_fee : {} ", refreshed_penalty_fee);
+
 		Ok(())
 	}
 
@@ -34,7 +36,7 @@ impl UserDeposit {
 		self.penalty_fee = new_penalty_fee;
 		self.latest_deposit_timestamp = Some(current_timestamp);
 
-		msg!("penalty_fee : {} ", self.penalty_fee);
+		msg!("new_penalty_fee : {} ", new_penalty_fee);
 
 		Ok(())
 	}
