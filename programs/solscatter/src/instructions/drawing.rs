@@ -27,7 +27,7 @@ pub struct Drawing<'info> {
     #[account(
         seeds = [_processing_slot.to_le_bytes().as_ref()],
         bump,
-        constraint = drawing_result.last_processed_slot + 1 == _processing_slot
+        constraint = drawing_result.last_processed_slot.checked_add(1).unwrap() == _processing_slot
     )]
     pub user_deposit: Account<'info, UserDeposit>,
     pub clock: Sysvar<'info, Clock>,
@@ -46,15 +46,15 @@ pub fn handler(ctx: Context<Drawing>, _processing_slot: u64) -> Result<()> {
     for random_number in random_numbers.into_iter() {
         match winners[index] {
             Some(_) => {
-                winner_count += 1;
+                winner_count = winner_count.checked_add(1).unwrap();
             },
             None => {
                 if random_number < user_deposit.amount {
                     drawing_result.winners[index] = Some(user_deposit.owner);
-                    winner_count += 1;
+                    winner_count = winner_count.checked_add(1).unwrap();
                 }
 
-                drawing_result.random_numbers[index] -= user_deposit.amount;
+                drawing_result.random_numbers[index] = drawing_result.random_numbers[index].checked_sub(user_deposit.amount).unwrap();
             },
         }
 
@@ -66,10 +66,10 @@ pub fn handler(ctx: Context<Drawing>, _processing_slot: u64) -> Result<()> {
         drawing_result.finished_timestamp = Some(ctx.accounts.clock.unix_timestamp);
         drawing_result.state = DrawingState::Finished;
 
-        main_state.current_round = main_state.current_round + 1;
+        main_state.current_round = main_state.current_round.checked_add(1).unwrap();
         return Ok(());
     } 
     
-    drawing_result.last_processed_slot = drawing_result.last_processed_slot + 1;
+    drawing_result.last_processed_slot = drawing_result.last_processed_slot.checked_add(1).unwrap();
     return Ok(());
 }
