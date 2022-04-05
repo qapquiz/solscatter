@@ -6,7 +6,7 @@ use crate::{
         METADATA_SEED,
     },
     duration::*,
-    state::{MainState, Metadata},
+    state::{MainState, Metadata, Fee},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{token::TokenAccount, associated_token::AssociatedToken};
@@ -132,6 +132,9 @@ impl<'info> Initialize<'info> {
         main_state.penalty_period = 7 * SECS_PER_DAY;
         main_state.penalty_fee = 5_f64;
         main_state.default_fee = 1_f64;
+
+        main_state.penalty_early_withdraw_fee = Fee { bips: 500 };
+        main_state.platform_fee = Fee { bips: 100 };
         Ok(())
     }
 

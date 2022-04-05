@@ -207,9 +207,24 @@ impl<'info> Withdraw<'info> {
 		self.unstake_from_yield_generator(yi_amount, platform_authority_bump)?;
 		self.user_deposit.refresh_penalty_fee(self.clock.unix_timestamp, self.main_state.penalty_period)?;
 
-		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100.;
+        let penalty_fee = self.main_state.penalty_early_withdraw_fee.calculate_fee_with_discount_peroid(
+            amount,
+            self.main_state.penalty_period as u64,
+            self.user_deposit.latest_deposit_timestamp.unwrap(),
+            self.clock.unix_timestamp,
+        )?;
+        let receive_amount = amount.checked_sub(penalty_fee).unwrap();
+
+        if penalty_fee != 0 {
+            // @todo transfer to fee collector token account
+        }
+
+		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100_f64;
 		let fee_amount = spl_token::ui_amount_to_amount(params.ui_amount * fee, params.decimals);
 		let withdraw_amount = amount - fee_amount;
+        
+        require_eq!(fee_amount, penalty_fee);
+        require_eq!(withdraw_amount, receive_amount);
 
 		self.transfer_yi_underlying_to_depositor(withdraw_amount, platform_authority_bump)?;
 		self.update_state(amount)

@@ -1125,6 +1125,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-maths"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5a56a07f42e0619414cda078b3f838d8df98ec2a4ed145d03c3b2a554556a7"
+dependencies = [
+ "arrayref",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
 name = "solana-program"
 version = "1.8.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1182,6 +1196,7 @@ dependencies = [
  "anchor-spl",
  "bytemuck",
  "quarry-mine",
+ "solana-maths",
  "solana-program",
  "spl-token",
  "switchboard-v2",
