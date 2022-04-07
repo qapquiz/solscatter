@@ -14,4 +14,6 @@ pub enum SolscatterError {
     InsufficientBalance,
     #[msg("never deposited")]
     NeverDeposited,
+    #[msg("withdraw zero amount")]
+    WithdrawZeroAmount
 }

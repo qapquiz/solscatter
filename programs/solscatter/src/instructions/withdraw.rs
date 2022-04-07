@@ -207,7 +207,7 @@ impl<'info> Withdraw<'info> {
 		self.unstake_from_yield_generator(yi_amount, platform_authority_bump)?;
 		self.user_deposit.refresh_penalty_fee(self.clock.unix_timestamp, self.main_state.penalty_period)?;
 
-		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100.;
+		let fee = (self.user_deposit.penalty_fee + self.main_state.default_fee) / 100_f64;
 		let fee_amount = spl_token::ui_amount_to_amount(params.ui_amount * fee, params.decimals);
 		let withdraw_amount = amount - fee_amount;
 

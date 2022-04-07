@@ -47,6 +47,7 @@ pub mod solscatter {
         instructions::withdraw::handler(ctx, params)
     }
 
+    #[access_control(ctx.accounts.validate(number_of_rewards, &random_numbers))]
     pub fn start_drawing_phase(ctx: Context<StartDrawingPhase>, number_of_rewards: u8, random_numbers: Vec<u64>) -> Result<()> {
         instructions::start_drawing_phase::handler(ctx, number_of_rewards, random_numbers)
     }

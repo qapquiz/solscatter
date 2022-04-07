@@ -873,9 +873,9 @@ dependencies = [
 
 [[package]]
 name = "quarry-mine"
-version = "4.1.0"
+version = "4.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d83fee183fc3f51247ea3c869791134b181e78d8d30e91004ec76bdb4da948a"
+checksum = "afd111f05a1dd2c7397533f77aedab8d0f4b0c86633195b2b91f17d9ca14bc21"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
